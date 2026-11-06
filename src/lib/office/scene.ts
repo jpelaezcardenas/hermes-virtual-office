@@ -52,6 +52,13 @@ import { dutyOf, a2aTarget, type Duty, type WorkSignals } from './duty'
 import { resolveReviewerTarget } from './huddle'
 import { hasGymEvidence } from './gym-janitor'
 import type { AvatarState } from './types'
+import {
+  PerformanceProfiler,
+  tuneRenderCadence,
+  detectDeviceClass,
+  type PerformanceMetrics,
+  type RenderCadencePolicy,
+} from './performance'
 
 export type SceneAgent = AnimAgent & {
   data: Agent
@@ -247,7 +254,14 @@ export function createScene(
   events: SceneEvents = {},
 ) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  const initialClass = typeof window !== 'undefined' ? detectDeviceClass(window.innerWidth) : 'desktop'
+  const initialCadence = tuneRenderCadence(initialClass, dpr, 2)
+  renderer.setPixelRatio(initialCadence.cappedDpr)
+  const profiler = new PerformanceProfiler(120, () => ({
+    memory: renderer.info?.memory,
+    render: renderer.info?.render,
+  }))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -897,15 +911,21 @@ export function createScene(
   const qualityLocked = false
 
   function setQuality(q: number) {
-    quality = Math.max(0, Math.min(2, q))
-    renderer.setPixelRatio(q === 2 ? Math.min(devicePixelRatio, 2) : 1)
-    renderer.shadowMap.enabled = q > 0
+    const parent = renderer.domElement.parentElement
+    const width = parent?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1280)
+    const deviceClass = detectDeviceClass(width)
+    const currentDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    const cadence = tuneRenderCadence(deviceClass, currentDpr, q, profiler.getMetrics())
+    quality = cadence.qualityLevel
+    renderer.setPixelRatio(cadence.cappedDpr)
+    renderer.shadowMap.enabled = cadence.shadowsEnabled
     renderer.shadowMap.needsUpdate = true
-    office.sun.shadow.mapSize.set(q === 2 ? 2048 : 1024, q === 2 ? 2048 : 1024)
+    if (cadence.shadowMapSize > 0) {
+      office.sun.shadow.mapSize.set(cadence.shadowMapSize, cadence.shadowMapSize)
+    }
     office.sun.shadow.map?.dispose()
     office.sun.shadow.map = null
-    if (q < 2) {
-      const parent = renderer.domElement.parentElement
+    if (quality < 2) {
       if (parent) renderer.setSize(parent.clientWidth, parent.clientHeight, false)
     }
   }
@@ -987,6 +1007,7 @@ export function createScene(
     // `performance.now()` alone makes a test useless: calling this in a tight loop yields
     // `now - last` of ~0, so every body stands still while still reporting `walking = 1`.
     const dt = forcedDt !== undefined ? forcedDt : Math.min(0.25, (now - last) / 1000)
+    profiler.recordFrame(dt * 1000)
     last = now
     t += dt
 
@@ -1467,6 +1488,17 @@ export function createScene(
     meetingRoomIds: MEETING_ROOM_IDS,
     conferenceChairs: CONFERENCE_CHAIRS,
     desks: DESKS,
+    profiler,
+    getPerformanceMetrics(): PerformanceMetrics {
+      return profiler.getMetrics()
+    },
+    getRenderCadencePolicy(): RenderCadencePolicy {
+      const parent = renderer.domElement.parentElement
+      const width = parent?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1280)
+      const deviceClass = detectDeviceClass(width)
+      const currentDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+      return tuneRenderCadence(deviceClass, currentDpr, quality, profiler.getMetrics())
+    },
   }
 }
 
