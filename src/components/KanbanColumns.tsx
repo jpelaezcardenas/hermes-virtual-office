@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useOffice } from '@/lib/store'
+import type { Task } from '@/types/hermes'
 import { EVIDENCE_MARK_LABEL, STALE_EVIDENCE, markClass, markOf, useEvidenceMarks } from './useEvidenceMarks'
 import {
   STALE_VERIFICATION,
@@ -16,17 +17,97 @@ import {
  * panel Papan semuanya memakai ini. Dulu tiap tempat punya salinan sendiri, dan salinan
  * modal diam-diam kehilangan kolom TERHAMBAT — task yang diblokir tidak terlihat di sana.
  * Yang boleh beda antar tempat hanya bingkainya (lewat props), bukan isi kolom/kartunya.
+ *
+ * Task 9.18: Mempertahankan 7 kolom native Hermes lengkap:
+ * 1. TODO (todo, triage, ready, scheduled)
+ * 2. DIKERJAKAN (running)
+ * 3. REVIEW (review)
+ * 4. SELESAI (done)
+ * 5. TERHAMBAT (blocked)
+ * 6. ARSIP (archived)
+ * 7. STATUS LAIN (status tak dikenal / unfamiliar raw state)
  */
 
-export const KANBAN_COLUMNS = [
-  { label: 'TODO', statuses: ['todo', 'triage', 'ready', 'scheduled'] },
-  { label: 'DIKERJAKAN', statuses: ['running'] },
-  { label: 'REVIEW', statuses: ['review'] },
-  { label: 'SELESAI', statuses: ['done'] },
-  { label: 'TERHAMBAT', statuses: ['blocked'] },
-  { label: 'ARSIP', statuses: ['archived'] },
+export type KanbanColumnConfig = {
+  id: string
+  label: string
+  statuses: string[]
+  isExecutable: boolean
+}
+
+export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
+  { id: 'todo', label: 'TODO', statuses: ['todo', 'triage', 'ready', 'scheduled'], isExecutable: true },
+  { id: 'running', label: 'DIKERJAKAN', statuses: ['running'], isExecutable: false },
+  { id: 'review', label: 'REVIEW', statuses: ['review'], isExecutable: false },
+  { id: 'done', label: 'SELESAI', statuses: ['done'], isExecutable: false },
+  { id: 'blocked', label: 'TERHAMBAT', statuses: ['blocked'], isExecutable: false },
+  { id: 'archived', label: 'ARSIP', statuses: ['archived'], isExecutable: false },
+  { id: 'other', label: 'STATUS LAIN', statuses: [], isExecutable: false },
 ]
-const KNOWN = KANBAN_COLUMNS.flatMap((column) => column.statuses)
+
+export const KNOWN = KANBAN_COLUMNS.flatMap((column) => column.statuses)
+
+export type BlockerBadgeInfo = {
+  kind: 'human' | 'dependency' | 'looping' | 'stale'
+  label: string
+  className: string
+  offersApproval: boolean
+}
+
+/**
+ * Distinguish blocker causes on TERHAMBAT cards.
+ * Human blockers offer an approval action; dependency, looping, and stale blockers do not.
+ */
+export function getBlockerBadgeInfo(task: Task): BlockerBadgeInfo | null {
+  const rawKind =
+    task.blockerKind ||
+    (task as any).blocker_kind ||
+    (task.blockReason?.kind === 'needs_input' ? 'human' : task.blockReason?.kind)
+
+  if (!rawKind) return null
+  const k = String(rawKind).toLowerCase()
+
+  if (k === 'human' || k === 'needs_input') {
+    return {
+      kind: 'human',
+      label: '[Menunggu Keputusan]',
+      className: 'vp-chip text-amber-300 border border-amber-500/50 bg-amber-500/10 font-semibold',
+      offersApproval: true,
+    }
+  }
+  if (k === 'dependency') {
+    return {
+      kind: 'dependency',
+      label: '[Tergantung Tugas Lain]',
+      className: 'vp-chip text-slate-300 border border-slate-500/50 bg-slate-500/10',
+      offersApproval: false,
+    }
+  }
+  if (k === 'looping') {
+    return {
+      kind: 'looping',
+      label: '[Looping]',
+      className: 'vp-chip text-red-400 border border-red-500/50 bg-red-500/10',
+      offersApproval: false,
+    }
+  }
+  if (k === 'stale') {
+    return {
+      kind: 'stale',
+      label: '[Macet]',
+      className: 'vp-chip text-orange-400 border border-orange-500/50 bg-orange-500/10',
+      offersApproval: false,
+    }
+  }
+  return null
+}
+
+export function getTaskSourceLabel(task: Task): string {
+  if (task.sourceProvider) return task.sourceProvider
+  if ((task as any).source_provider) return (task as any).source_provider
+  if (task.origin && task.origin.kind !== 'manual') return task.origin.kind
+  return 'hermes'
+}
 
 export default function KanbanColumns({
   search = false,
@@ -57,10 +138,18 @@ export default function KanbanColumns({
   const shown = needle
     ? tasks.filter((t) => t.title.toLowerCase().includes(needle) || (t.assignee ?? '').toLowerCase().includes(needle))
     : tasks
-  const columns = [
-    ...KANBAN_COLUMNS.map((column) => ({ ...column, items: shown.filter((task) => column.statuses.includes(task.status)) })),
-    { label: 'STATUS LAIN', statuses: [], items: shown.filter((task) => !KNOWN.includes(task.status)) },
-  ]
+  const columns = KANBAN_COLUMNS.map((column) => {
+    if (column.id === 'other' || column.label === 'STATUS LAIN') {
+      return {
+        ...column,
+        items: shown.filter((task) => !KNOWN.includes(task.status)),
+      }
+    }
+    return {
+      ...column,
+      items: shown.filter((task) => column.statuses.includes(task.status)),
+    }
+  })
 
   return (
     <>
@@ -76,28 +165,47 @@ export default function KanbanColumns({
               {column.items.map((task) => {
                 const mark = markOf(marks, task)
                 const vmark = verificationMarkOf(vf, task)
+                const isOtherColumn = column.id === 'other' || column.label === 'STATUS LAIN'
+                const isBlockedColumn = column.id === 'blocked' || column.label === 'TERHAMBAT'
+                const blockerInfo = isBlockedColumn ? getBlockerBadgeInfo(task) : null
+                const source = getTaskSourceLabel(task)
+
                 return (
-                <article
-                  key={task.id}
-                  className="vp-card"
-                  onClick={() => {
-                    openTask(task.id)
-                    closeAfterOpen?.()
-                  }}
-                >
-                  <div className="vp-card-title">{task.title}</div>
-                  <div className="vp-card-meta">
-                    <span className="vp-chip">{column.label === 'STATUS LAIN' ? task.status : task.assignee || '—'}</span>
-                    {task.origin && task.origin.kind !== 'manual' && (
-                      <span className={`vp-chip vp-chip-${task.origin.kind}`}>{task.origin.kind}</span>
-                    )}
-                    <code>{task.id}</code>
-                    {mark && <span className={markClass(mark)}>{EVIDENCE_MARK_LABEL[mark]}</span>}
-                    {vmark && (
-                      <span className={verificationMarkClass(vmark)}>{VERIFICATION_MARK_LABEL[vmark]}</span>
-                    )}
-                  </div>
-                </article>
+                  <article
+                    key={task.id}
+                    className="vp-card"
+                    onClick={() => {
+                      openTask(task.id)
+                      closeAfterOpen?.()
+                    }}
+                  >
+                    <div className="vp-card-title">{task.title}</div>
+                    <div className="vp-card-meta flex flex-wrap items-center gap-1">
+                      {isOtherColumn ? (
+                        <>
+                          <span className="vp-chip vp-chip-warn font-mono">raw: {task.status}</span>
+                          <span className="vp-chip uppercase">{source}</span>
+                        </>
+                      ) : (
+                        <span className="vp-chip">{task.assignee || '—'}</span>
+                      )}
+
+                      {!isOtherColumn && task.origin && task.origin.kind !== 'manual' && (
+                        <span className={`vp-chip vp-chip-${task.origin.kind}`}>{task.origin.kind}</span>
+                      )}
+
+                      <code>{task.id}</code>
+
+                      {blockerInfo && (
+                        <span className={blockerInfo.className}>{blockerInfo.label}</span>
+                      )}
+
+                      {mark && <span className={markClass(mark)}>{EVIDENCE_MARK_LABEL[mark]}</span>}
+                      {vmark && (
+                        <span className={verificationMarkClass(vmark)}>{VERIFICATION_MARK_LABEL[vmark]}</span>
+                      )}
+                    </div>
+                  </article>
                 )
               })}
               {!column.items.length && <div className="vp-empty">kosong</div>}

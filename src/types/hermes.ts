@@ -16,6 +16,7 @@ export type TaskStatus =
   | 'blocked'
   | 'done'
   | 'archived'
+  | (string & {})
 /** Meeting modes: `simulasi` = LLM gateway voices everyone (labelled honestly),\n * `a2a` = real agents speak via the A2A protocol. `auto` = legacy alias of simulasi. */
 export type MeetingMode = 'auto' | 'simulasi' | 'a2a'
 export type MeetingState = 'queued' | 'running' | 'done' | 'error' | 'idle' | 'cancelled'
@@ -57,6 +58,17 @@ export type Task = {
   model?: string | null
   /** Provider that owns `model`, when one was pinned with it. */
   provider?: string | null
+  sourceProvider?: string
+  source_provider?: string
+  blockerKind?: 'human' | 'dependency' | 'looping' | 'stale' | string
+  blocker_kind?: string
+  blockerReason?: string
+  blocker_reason?: string
+  blockReason?: {
+    kind?: 'needs_input' | 'dependency' | 'looping' | 'stale' | string
+    reason?: string
+    detail?: string
+  }
   /**
    * Ids of the tasks this one waits for, from `kanban show`.
    *

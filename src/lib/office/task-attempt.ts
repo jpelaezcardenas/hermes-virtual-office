@@ -23,6 +23,7 @@ export type TaskCanonicalStatus =
   | 'review'
   | 'done'
   | 'blocked'
+  | 'archived'
   | 'waiting'
   | 'unknown'
 
@@ -69,6 +70,7 @@ export const KNOWN_CANONICAL_STATUSES: ReadonlySet<string> = new Set([
   'review',
   'done',
   'blocked',
+  'archived',
 ])
 
 export const VALID_EXECUTION_PROVIDERS: ReadonlySet<string> = new Set([

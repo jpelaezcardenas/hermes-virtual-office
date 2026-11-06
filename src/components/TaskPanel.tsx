@@ -12,6 +12,7 @@ import {
   buildTaskCanonicalReadModel,
   type TaskCanonicalReadModel,
 } from '@/lib/office/task-attempt'
+import { KNOWN } from './KanbanColumns'
 
 type RunInfo = {
   id: number
@@ -213,6 +214,10 @@ export default function TaskPanel() {
 
   /** run | promote | set-model */
   async function act(action: 'run' | 'promote' | 'set-model', extra: Record<string, unknown> = {}) {
+    if (action === 'run' && isUnexecutable) {
+      setNote('Tugas diarsipkan / status tidak dikenal tidak dapat dieksekusi.')
+      return
+    }
     setBusy(true)
     setNote(null)
     setConfirmDispatch(false)
@@ -244,6 +249,18 @@ export default function TaskPanel() {
       setBusy(false)
     }
   }
+
+  const isArchived = task?.status === 'archived' || readModel?.canonicalStatus === 'archived'
+  const isUnknown = Boolean(readModel?.isUnknownState || (task?.status && !KNOWN.includes(task.status)))
+  const isUnexecutable = Boolean(isArchived || isUnknown)
+
+  const dispatchDisabledReason = isUnexecutable
+    ? 'Tugas diarsipkan / status tidak dikenal tidak dapat dieksekusi'
+    : readModel?.canonicalStatus === 'waiting'
+    ? 'Tugas masih menunggu dependensi prasyarat'
+    : task?.status === 'running' || task?.status === 'review' || task?.status === 'done'
+    ? 'Tugas sedang berjalan, menunggu review, atau telah selesai'
+    : 'Buka konfirmasi eksekusi tugas'
 
   const blocked = task?.status === 'blocked' || task?.status === 'scheduled'
 
@@ -387,7 +404,7 @@ export default function TaskPanel() {
                 there whenever the gateway is down. It lifts a parked task first,
                 so one click covers blocked/scheduled too. */}
             <div className="vp-sub">JALANKAN</div>
-            {confirmDispatch && (
+            {confirmDispatch && !isUnexecutable && (
               <div className="p-3 border border-amber-500/40 bg-amber-500/10 rounded flex flex-col gap-2">
                 <div className="text-sm font-medium">
                   Konfirmasi eksekusi tugas: <span className="font-bold">{readModel?.title || task.title}</span>?
@@ -421,33 +438,31 @@ export default function TaskPanel() {
                 className="vp-btn"
                 disabled={
                   busy ||
-                  (readModel ? !readModel.canDispatch : (task.status === 'running' || task.status === 'review'))
+                  isUnexecutable ||
+                  (readModel ? !readModel.canDispatch : (task.status === 'running' || task.status === 'review' || task.status === 'done'))
                 }
-                onClick={() => setConfirmDispatch(true)}
-                title={
-                  readModel?.isUnknownState
-                    ? 'Status tidak dikenal tidak dapat dieksekusi'
-                    : readModel?.canonicalStatus === 'waiting'
-                    ? 'Tugas masih menunggu dependensi prasyarat'
-                    : 'Buka konfirmasi eksekusi tugas'
-                }
+                onClick={() => {
+                  if (!isUnexecutable) {
+                    setConfirmDispatch(true)
+                  }
+                }}
+                title={dispatchDisabledReason}
               >
                 {busy ? '…' : 'Jalankan'}
               </button>
             </div>
-            {blocked && (
+            {isUnexecutable ? (
+              <div className="vp-muted text-xs text-amber-400">
+                Tugas diarsipkan / status tidak dikenal tidak dapat dieksekusi.
+              </div>
+            ) : blocked ? (
               <div className="vp-muted">
                 Status <b>{task.status}</b>: tombol Jalankan otomatis membuka blokir dulu saat dikonfirmasi.
               </div>
-            )}
-            {readModel?.canonicalStatus === 'waiting' && (
+            ) : null}
+            {!isUnexecutable && readModel?.canonicalStatus === 'waiting' && (
               <div className="vp-muted text-xs">
                 Tugas berstatus menunggu prasyarat dan belum dapat dijalankan.
-              </div>
-            )}
-            {readModel?.isUnknownState && (
-              <div className="vp-muted text-xs">
-                Tugas berstatus tidak dikenal tidak dapat dieksekusi secara otomatis.
               </div>
             )}
 
