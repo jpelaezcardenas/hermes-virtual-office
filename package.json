@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "selftest": "tsx scripts/selftest.ts",
     "demo": "NEXT_PUBLIC_OFFICE_MODE=demo next dev --hostname 127.0.0.1 --port 3001",
-    "test:demo": "tsx scripts/test-demo-mode-boundary.ts"
+    "test:demo": "tsx scripts/test-demo-mode-boundary.ts",
+    "test:geometry": "tsx scripts/test-geometry-collision-bounds.ts"
   },
   "dependencies": {
     "next": "^15.1.0",
@@ -33,4 +34,4 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.0"
   }
-}
+}
