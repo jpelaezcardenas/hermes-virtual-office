@@ -18,6 +18,7 @@ import DummySpawnDialog from './DummySpawnDialog'
 import OfficeNameDialog from './OfficeNameDialog'
 import { startPolling, useOffice } from '@/lib/store'
 import { isDemoMode } from '@/lib/office/mode'
+import type { CameraPresetId } from '@/lib/office/camera'
 import type { OfficeScene } from '@/lib/office/scene'
 import type { AgentDivision } from '@/types/hermes'
 
@@ -55,6 +56,14 @@ export default function OfficeApp() {
   const [chatOpen, setChatOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
   const [nameOpen, setNameOpen] = useState(false)
+  const [activePreset, setActivePreset] = useState<CameraPresetId>('overall')
+
+  const handleCameraPreset = (presetId: CameraPresetId) => {
+    setActivePreset(presetId)
+    if (sceneRef.current) {
+      sceneRef.current.applyCameraPreset(presetId, true)
+    }
+  }
   /** Slot of a dummy avatar that was clicked, if any. */
   const [spawnSlot, setSpawnSlot] = useState<{ avatarId: string; division: AgentDivision } | null>(null)
   const loadOffice = useOffice((s) => s.loadOffice)
@@ -102,6 +111,10 @@ export default function OfficeApp() {
       if (e.key === '3') setView('3d')
       if (e.key === '2') setView('2d')
       if (e.key === '1') setView('sprite')
+      if (e.key === '4') handleCameraPreset('overall')
+      if (e.key === '5') handleCameraPreset('courtyard')
+      if (e.key === '6') handleCameraPreset('lounge')
+      if (e.key === '7') handleCameraPreset('upper-floor')
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
@@ -120,7 +133,12 @@ export default function OfficeApp() {
       <main className="vp-stage">
         {view === '3d' ? (
           <Scene3D
-            onScene={(s) => (sceneRef.current = s)}
+            onScene={(s) => {
+              sceneRef.current = s
+              if (s && activePreset !== 'overall') {
+                s.applyCameraPreset(activePreset, false)
+              }
+            }}
             onDummy={(avatarId, division) => setSpawnSlot({ avatarId, division })}
             onBoard={() => setBoardOpen(true)}
             onName={() => setNameOpen(true)}
@@ -131,6 +149,57 @@ export default function OfficeApp() {
           <Kanban2D />
         )}
       </main>
+
+      {/* ------------------------------------------------------- camera preset selector */}
+      {view === '3d' && (
+        <aside
+          className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5 p-2 rounded-xl bg-[#131b21ee] border border-[#26333d] shadow-lg backdrop-blur-md"
+          aria-label="Preset Kamera"
+        >
+          <div className="flex items-center justify-between px-1 text-[11px] font-semibold tracking-wider uppercase text-[#8fa2ae]">
+            <span>Sudut Pandang</span>
+            <span className="text-[10px] text-[#8fa2ae]/70 font-mono">4-7</span>
+          </div>
+          <div className="vp-seg" role="toolbar" aria-label="Pilihan Preset Kamera">
+            <button
+              type="button"
+              className={activePreset === 'overall' ? 'on' : ''}
+              onClick={() => handleCameraPreset('overall')}
+              title="Overall Office (Tombol 4)"
+              aria-pressed={activePreset === 'overall'}
+            >
+              Overall
+            </button>
+            <button
+              type="button"
+              className={activePreset === 'courtyard' ? 'on' : ''}
+              onClick={() => handleCameraPreset('courtyard')}
+              title="Courtyard & Pool (Tombol 5)"
+              aria-pressed={activePreset === 'courtyard'}
+            >
+              Courtyard
+            </button>
+            <button
+              type="button"
+              className={activePreset === 'lounge' ? 'on' : ''}
+              onClick={() => handleCameraPreset('lounge')}
+              title="East Wing Lounge (Tombol 6)"
+              aria-pressed={activePreset === 'lounge'}
+            >
+              Lounge
+            </button>
+            <button
+              type="button"
+              className={activePreset === 'upper-floor' ? 'on' : ''}
+              onClick={() => handleCameraPreset('upper-floor')}
+              title="Upper Floor & CEO (Tombol 7)"
+              aria-pressed={activePreset === 'upper-floor'}
+            >
+              Upper Floor
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* ------------------------------------------------------- top bar */}
       <header ref={barRef} className="vp-topbar">

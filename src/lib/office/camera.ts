@@ -1,5 +1,5 @@
 /**
- * Camera Presets & Calibration — Task 9.2 / Task 9.6
+ * Camera Presets, Calibration & Floor Levels — Task 9.2 / Task 9.6
  *
  * Implements persistent definitions for the four official camera presets:
  * - Overall office (office-3d.jpg)
@@ -7,9 +7,18 @@
  * - East wing lounge & dining (office-lounge.jpg)
  * - Upper floor & CEO suite (office-upper-floor.jpg)
  *
- * Calibrated against the founder's 2000x1000 reference images and responsive
- * mobile framing (390x844).
+ * Invariants:
+ * - Exactly two occupied levels: Level 0 (ground) and Level 1 (upper north bar).
+ * - Roof rim datum at 6.8m (LEVELS = 2, LEVEL_H = 3.4) is decorative trim;
+ *   strictly no third occupied terrace or infrastructure tower.
+ * - Calibrated against the founder's 2000x1000 reference images and responsive
+ *   mobile framing (390x844).
  */
+
+export const LEVELS = 2
+export const LEVEL_H = 3.4
+export const ROOF_Y = 6.8 // decorative rim datum (LEVELS * LEVEL_H)
+export const OCCUPIED_LEVELS = [0, 1] as const
 
 export type CameraPresetId = 'overall' | 'courtyard' | 'lounge' | 'upper-floor'
 
@@ -138,4 +147,157 @@ export function computeAspectRatio(viewport: CameraViewport): number {
 
 export function isMobileViewport(width: number, height: number): boolean {
   return width < 768 || width < height
+}
+
+/**
+ * Returns true strictly for the two occupied levels (0 = ground, 1 = upper north bar).
+ * Rejects levels >= 2 (level 2 is decorative roof rim datum, not occupied).
+ */
+export function isOccupiedLevel(level: number): boolean {
+  return level === 0 || level === 1
+}
+
+/**
+ * Validates floor level requests against the two-occupied-level invariant.
+ * Explicitly rejects level >= 2 or terrace/tower requests with clear explanations.
+ */
+export function validateFloorLevel(level: number): { valid: boolean; error?: string } {
+  if (level === 0) {
+    return { valid: true }
+  }
+  if (level === 1) {
+    return { valid: true }
+  }
+  if (level === 2) {
+    return {
+      valid: false,
+      error: 'Level 2 does not exist as an occupied floor; 6.8m datum is strictly a decorative roof rim trim.',
+    }
+  }
+  if (level < 0) {
+    return {
+      valid: false,
+      error: 'Negative levels are not supported. Only levels 0 and 1 are occupied.',
+    }
+  }
+  return {
+    valid: false,
+    error: `Level ${level} does not exist. The building strictly has two occupied levels (0 and 1); no terrace or tower.`,
+  }
+}
+
+/**
+ * Structural interfaces for camera and controls to remain decoupled from full Three.js imports in test runners.
+ */
+export interface CameraLike {
+  position: { set: (x: number, y: number, z: number) => void; x: number; y: number; z: number }
+  fov: number
+  zoom: number
+  aspect: number
+  updateProjectionMatrix: () => void
+}
+
+export interface OrbitControlsLike {
+  target: { set: (x: number, y: number, z: number) => void; x: number; y: number; z: number }
+  minDistance: number
+  maxDistance: number
+  update?: () => void
+}
+
+/**
+ * CameraManager controls the perspective camera & OrbitControls, applies presets,
+ * and maintains the active preset calibrated across viewport resizes.
+ */
+export class CameraManager {
+  private activePresetId: CameraPresetId = 'overall'
+  private camera: CameraLike
+  private controls: OrbitControlsLike
+  private animationFrameId: number | null = null
+
+  constructor(camera: CameraLike, controls: OrbitControlsLike, initialPreset: CameraPresetId = 'overall') {
+    this.camera = camera
+    this.controls = controls
+    this.applyPreset(initialPreset, false)
+  }
+
+  getActivePresetId(): CameraPresetId {
+    return this.activePresetId
+  }
+
+  getActivePreset(): CameraPreset {
+    return getCameraPreset(this.activePresetId)
+  }
+
+  applyPreset(id: CameraPresetId, animate = false): CameraPreset {
+    const preset = getCameraPreset(id)
+    this.activePresetId = id
+
+    if (this.animationFrameId !== null && typeof cancelAnimationFrame !== 'undefined') {
+      cancelAnimationFrame(this.animationFrameId)
+      this.animationFrameId = null
+    }
+
+    if (!animate || typeof requestAnimationFrame === 'undefined') {
+      this.camera.position.set(preset.position.x, preset.position.y, preset.position.z)
+      this.controls.target.set(preset.target.x, preset.target.y, preset.target.z)
+      this.camera.fov = preset.fov
+      this.camera.zoom = preset.zoom
+      this.controls.minDistance = preset.minDistance
+      this.controls.maxDistance = preset.maxDistance
+      this.camera.updateProjectionMatrix()
+      this.controls.update?.()
+      return preset
+    }
+
+    // Smooth camera transition
+    const startPos = { x: this.camera.position.x, y: this.camera.position.y, z: this.camera.position.z }
+    const startTarget = { x: this.controls.target.x, y: this.controls.target.y, z: this.controls.target.z }
+    const startFov = this.camera.fov
+    const startZoom = this.camera.zoom
+    const duration = 300
+    const startTime = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(1.0, elapsed / duration)
+      // easeOutCubic
+      const ease = 1 - Math.pow(1 - progress, 3)
+
+      this.camera.position.set(
+        startPos.x + (preset.position.x - startPos.x) * ease,
+        startPos.y + (preset.position.y - startPos.y) * ease,
+        startPos.z + (preset.position.z - startPos.z) * ease,
+      )
+      this.controls.target.set(
+        startTarget.x + (preset.target.x - startTarget.x) * ease,
+        startTarget.y + (preset.target.y - startTarget.y) * ease,
+        startTarget.z + (preset.target.z - startTarget.z) * ease,
+      )
+      this.camera.fov = startFov + (preset.fov - startFov) * ease
+      this.camera.zoom = startZoom + (preset.zoom - startZoom) * ease
+      this.camera.updateProjectionMatrix()
+      this.controls.update?.()
+
+      if (progress < 1.0) {
+        this.animationFrameId = requestAnimationFrame(step)
+      } else {
+        this.controls.minDistance = preset.minDistance
+        this.controls.maxDistance = preset.maxDistance
+        this.animationFrameId = null
+      }
+    }
+
+    this.animationFrameId = requestAnimationFrame(step)
+    return preset
+  }
+
+  handleResize(width: number, height: number): void {
+    if (height <= 0) return
+    this.camera.aspect = width / height
+    const preset = this.getActivePreset()
+    // Retain calibrated FOV & zoom for active preset
+    this.camera.fov = preset.fov
+    this.camera.zoom = preset.zoom
+    this.camera.updateProjectionMatrix()
+  }
 }

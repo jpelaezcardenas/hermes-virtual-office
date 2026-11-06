@@ -18,7 +18,8 @@
     "test:geometry": "tsx scripts/test-geometry-collision-bounds.ts",
     "test:roster": "tsx scripts/test-contexia-roster-binding.ts",
     "test:props": "tsx scripts/test-props-materials-and-idle-inference.ts",
-    "test:meetings": "tsx scripts/test-meeting-rooms-and-seating.ts"
+    "test:meetings": "tsx scripts/test-meeting-rooms-and-seating.ts",
+    "test:camera": "tsx scripts/test-camera-presets-and-roof-rim.ts"
   },
   "dependencies": {
     "next": "^15.1.0",

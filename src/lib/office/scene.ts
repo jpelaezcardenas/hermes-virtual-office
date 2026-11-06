@@ -22,6 +22,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRe
 import { buildOffice, type OfficeProps } from './build'
 import type { Health } from './health'
 import { buildAvatar } from './avatar'
+import { CameraManager, type CameraPresetId } from './camera'
 import { animate, type Activity, type AnimAgent } from './anim'
 import { blocked, onStairArea, planRoute, stairCentre, BODY_R, type Level, type Waypoint } from './nav'
 import {
@@ -288,6 +289,7 @@ export function createScene(
   controls.maxDistance = 95
   controls.enablePan = true
   controls.screenSpacePanning = false
+  const cameraManager = new CameraManager(camera, controls, 'overall')
 
   /* ---------------------------------------------------------- avatars ------ */
 
@@ -1243,8 +1245,8 @@ export function createScene(
   function resize(w: number, h: number) {
     renderer.setSize(w, h, false)
     labelRenderer.setSize(w, h)
-    camera.aspect = w / h
-    camera.updateProjectionMatrix()
+    cameraManager.handleResize(w, h)
+
   }
 
   /** Kept for the OfficeApp contract; the 3D view no longer draws cards. */
@@ -1367,6 +1369,13 @@ export function createScene(
     resize,
     dispose,
     avatarSnapshot,
+    cameraManager,
+    applyCameraPreset(id: CameraPresetId, animate?: boolean) {
+      cameraManager.applyPreset(id, animate)
+    },
+    getActiveCameraPreset(): CameraPresetId | null {
+      return cameraManager.getActivePresetId()
+    },
     /**
      * Advance the simulation by hand, for tests.
      *
