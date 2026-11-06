@@ -11,15 +11,30 @@
 import type { AgentStatus } from '@/types/hermes'
 
 /**
- * Urutan prioritas: rapat > a2a > kerja di meja > review > bebas.
+ * Urutan prioritas deterministic kantor: rapat > a2a > kerja di meja > review > bebas.
  *
  * Rapat paling atas karena rapat mengikat beberapa orang sekaligus di satu ruang. A2A di
  * atas kerja-di-meja: agent yang sedang dalam percakapan agent-ke-agent harus BERHENTI dari
  * aktivitasnya dan menuju lawan bicaranya — seperti aturan "kerja mengalahkan istirahat".
- * Kerja di meja di atas review karena agent yang sedang diajak chat sedang BEKERJA, walau
- * papan masih menulis task-nya `review`.
+ * Kerja di meja di atas review karena agent yang sedang diajak chat atau mengerjakan task
+ * sedang BEKERJA, walau papan masih menulis task-nya `review`.
  */
-export type Duty = 'meeting' | 'a2a' | 'desk' | 'review' | 'idle'
+export const DUTY_PRIORITY_ORDER = ['meeting', 'a2a', 'desk', 'review', 'idle'] as const
+
+export type Duty = (typeof DUTY_PRIORITY_ORDER)[number]
+
+/**
+ * Memeriksa apakah d1 memiliki prioritas lebih tinggi daripada d2 dalam hierarki resmi:
+ * meeting > a2a > desk > review > idle.
+ */
+export function isHigherPriority(d1: Duty, d2: Duty): boolean {
+  const i1 = DUTY_PRIORITY_ORDER.indexOf(d1)
+  const i2 = DUTY_PRIORITY_ORDER.indexOf(d2)
+  if (i1 === -1 || i2 === -1) {
+    throw new Error(`Invalid duty for priority comparison: '${d1}' vs '${d2}'`)
+  }
+  return i1 < i2
+}
 
 /**
  * Percakapan dianggap masih hidup selama ini setelah balasan terakhir.
@@ -48,13 +63,127 @@ export type DutyInput = {
    * yang masih hidup). Null/undefined = tidak ada. Rapat tetap menang di atas ini.
    */
   a2aPeer?: string | null
+  /** Apakah lawan bicara A2A punya meja sendiri. */
+  peerHasDesk?: boolean | null
+  /** Indeks meja peer bila diketahui. */
+  peerDesk?: number | null
   /** Kantor sedang dalam keadaan "ada kerja cron" (lihat `cronPulse` — ini KEBIJAKAN). */
   cronLive: boolean
+  /** Tugas review yang aktif atau tertugaskan pada agent ini. */
+  hasReviewAssignment?: boolean
+  hasReview?: boolean
+  reviewAssignment?: boolean
+}
+
+export type DutyArbitrationResult = {
+  duty: Duty
+  interrupted: boolean
+  previousDuty?: Duty
+  resumptionDuty?: Duty
+  visualTripCancelled?: boolean
+}
+
+/**
+ * Menyelesaikan tugas pemulihan (resumption duty) tertinggi yang masih aktif dari input.
+ */
+export function resolveResumptionDuty(input: DutyInput): Duty {
+  if (input.isDummy) return 'idle'
+  if (input.inMeeting) return 'meeting'
+  if (input.a2aPeer) return 'a2a'
+  if (
+    (input.status === 'working' ||
+      input.status === 'blocked' ||
+      input.chatLive ||
+      (input.cronLive && input.status === 'idle')) &&
+    input.hasDesk
+  ) {
+    return 'desk'
+  }
+  if (
+    input.status === 'review' ||
+    input.hasReviewAssignment ||
+    input.hasReview ||
+    input.reviewAssignment
+  ) {
+    return 'review'
+  }
+  return 'idle'
+}
+
+/**
+ * Arbitrasi kewajiban (duty) agent secara deterministik berdasarkan urutan prioritas:
+ * meeting > a2a > desk > review > idle.
+ *
+ * Mengembalikan status duty yang berlaku, apakah menginterupsi duty sebelumnya,
+ * dan apakah perjalanan visual dibatalkan untuk agent / peer tanpa meja.
+ */
+export function arbitrateDuty(input: DutyInput, previousDuty?: Duty): DutyArbitrationResult {
+  if (input.isDummy) {
+    return {
+      duty: 'idle',
+      interrupted: false,
+      previousDuty,
+      resumptionDuty: undefined,
+      visualTripCancelled: false,
+    }
+  }
+
+  let duty: Duty = 'idle'
+  let visualTripCancelled = false
+
+  if (input.inMeeting) {
+    duty = 'meeting'
+  } else if (input.a2aPeer) {
+    duty = 'a2a'
+    // Bila peer tidak punya meja atau agent sendiri tanpa meja: batalkan perjalanan visual
+    // tanpa mengarang meja fiktif, mempertahankan kebenaran underlying duty 'a2a'.
+    if (
+      input.peerHasDesk === false ||
+      input.peerDesk === null ||
+      !input.hasDesk
+    ) {
+      visualTripCancelled = true
+    }
+  } else if (
+    (input.status === 'working' ||
+      input.status === 'blocked' ||
+      input.chatLive ||
+      (input.cronLive && input.status === 'idle')) &&
+    input.hasDesk
+  ) {
+    duty = 'desk'
+  } else if (
+    input.status === 'review' ||
+    input.hasReviewAssignment ||
+    input.hasReview ||
+    input.reviewAssignment
+  ) {
+    duty = 'review'
+  } else {
+    duty = 'idle'
+  }
+
+  let interrupted = false
+  let resumptionDuty: Duty | undefined = undefined
+
+  if (previousDuty && isHigherPriority(duty, previousDuty)) {
+    interrupted = true
+    resumptionDuty = previousDuty
+  }
+
+  return {
+    duty,
+    interrupted,
+    previousDuty,
+    resumptionDuty,
+    visualTripCancelled,
+  }
 }
 
 export function dutyOf(i: DutyInput): Duty {
+  if (i.isDummy) return 'idle'
   if (i.inMeeting) return 'meeting'
-  if (i.isDummy || !i.hasDesk) return 'idle'
+  if (!i.hasDesk) return 'idle'
   if (i.a2aPeer) return 'a2a'
   if (i.status === 'working' || i.status === 'blocked') return 'desk'
   if (i.chatLive) return 'desk'
