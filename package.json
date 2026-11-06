@@ -33,7 +33,8 @@
     "test:performance": "tsx scripts/test-performance-cadence-and-memory.ts",
     "test:board": "tsx scripts/test-seven-board-columns-and-blockers.ts",
     "test:render-modes": "tsx scripts/test-render-modes-and-safe-area.ts",
-    "test:routing": "tsx scripts/test-room-routing-and-contexia-labels.ts"
+    "test:routing": "tsx scripts/test-room-routing-and-contexia-labels.ts",
+    "test:walkthrough": "tsx scripts/test-official-views-and-walkthrough.ts"
   },
   "dependencies": {
     "next": "^15.1.0",
