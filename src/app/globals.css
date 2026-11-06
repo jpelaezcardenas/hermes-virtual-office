@@ -1170,3 +1170,15 @@ button.vp-run:hover { border-left-color: #6f8fa3; background: #131c23; }
 }
 /* pre-wrap alone lets a long unbroken token widen the panel instead of wrapping */
 .vp-pre-block { overflow-wrap: anywhere; word-break: normal; max-height: 380px; }
+
+/* ---------------------------------------------------------------- accessibility & reduced-motion -- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1423,8 +1423,8 @@ export function createScene(
     dispose,
     avatarSnapshot,
     cameraManager,
-    applyCameraPreset(id: CameraPresetId, animate?: boolean) {
-      cameraManager.applyPreset(id, animate)
+    applyCameraPreset(id: CameraPresetId, animate?: boolean, options?: { reducedMotion?: boolean }) {
+      cameraManager.applyPreset(id, animate, options)
     },
     getActiveCameraPreset(): CameraPresetId | null {
       return cameraManager.getActivePresetId()

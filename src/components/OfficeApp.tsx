@@ -107,9 +107,28 @@ export default function OfficeApp() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+
+      if (e.key === 'Escape') {
+        select(null)
+        setMeetOpen(false)
+        setChatOpen(false)
+        setApprovalOpen(false)
+        setPanelOpen(false)
+        setSystemOpen(false)
+        setAgentOpen(false)
+        setCronOpen(false)
+        setBoardOpen(false)
+        setNameOpen(false)
+        setSpawnSlot(null)
+        return
+      }
+
       if (e.key === 'm' || e.key === 'M') setMeetOpen((v) => !v)
       if (e.key === 'n' || e.key === 'N') setNewTaskOpen(true)
       if (e.key === 'c' || e.key === 'C') setChatOpen((v) => !v)
+      if (e.key === 'p' || e.key === 'P') setApprovalOpen((v) => !v)
+      if (e.key === 'b' || e.key === 'B') setPanelOpen((v) => !v)
+      if (e.key === 's' || e.key === 'S') setSystemOpen((v) => !v)
       if (e.key === '3') setView('3d')
       if (e.key === '2') setView('2d')
       if (e.key === '1') setView('sprite')
@@ -120,7 +139,7 @@ export default function OfficeApp() {
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
-  }, [setView, setNewTaskOpen])
+  }, [setView, setNewTaskOpen, select])
 
   const backendOnline = !error
   // Archived tasks are on the board (the 2D view has an ARSIP column) but they
@@ -155,17 +174,17 @@ export default function OfficeApp() {
       {/* ------------------------------------------------------- camera preset selector */}
       {view === '3d' && (
         <aside
-          className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5 p-2 rounded-xl bg-[#131b21ee] border border-[#26333d] shadow-lg backdrop-blur-md"
+          className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5 p-2 rounded-xl bg-[#131b21ee] border border-[#26333d] shadow-lg backdrop-blur-md max-w-[calc(100vw-2rem)] overflow-x-auto"
           aria-label="Preset Kamera"
         >
           <div className="flex items-center justify-between px-1 text-[11px] font-semibold tracking-wider uppercase text-[#8fa2ae]">
             <span>Sudut Pandang</span>
             <span className="text-[10px] text-[#8fa2ae]/70 font-mono">4-7</span>
           </div>
-          <div className="vp-seg" role="toolbar" aria-label="Pilihan Preset Kamera">
+          <div className="vp-seg flex overflow-x-auto min-h-[44px] items-center" role="toolbar" aria-label="Pilihan Preset Kamera">
             <button
               type="button"
-              className={activePreset === 'overall' ? 'on' : ''}
+              className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'overall' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('overall')}
               title="Overall Office (Tombol 4)"
               aria-pressed={activePreset === 'overall'}
@@ -174,7 +193,7 @@ export default function OfficeApp() {
             </button>
             <button
               type="button"
-              className={activePreset === 'courtyard' ? 'on' : ''}
+              className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'courtyard' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('courtyard')}
               title="Courtyard & Pool (Tombol 5)"
               aria-pressed={activePreset === 'courtyard'}
@@ -183,7 +202,7 @@ export default function OfficeApp() {
             </button>
             <button
               type="button"
-              className={activePreset === 'lounge' ? 'on' : ''}
+              className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'lounge' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('lounge')}
               title="East Wing Lounge (Tombol 6)"
               aria-pressed={activePreset === 'lounge'}
@@ -192,7 +211,7 @@ export default function OfficeApp() {
             </button>
             <button
               type="button"
-              className={activePreset === 'upper-floor' ? 'on' : ''}
+              className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'upper-floor' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('upper-floor')}
               title="Upper Floor & CEO (Tombol 7)"
               aria-pressed={activePreset === 'upper-floor'}

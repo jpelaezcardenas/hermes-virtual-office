@@ -28,7 +28,8 @@
     "test:gym-janitor": "tsx scripts/test-gym-evidence-and-janitor-fixtures.ts",
     "test:task-panel": "tsx scripts/test-task-provider-attempt-panel.ts",
     "test:transcripts": "tsx scripts/test-monitor-and-transcript-panels.ts",
-    "test:approvals": "tsx scripts/test-approval-conflict-panel.ts"
+    "test:approvals": "tsx scripts/test-approval-conflict-panel.ts",
+    "test:accessibility": "tsx scripts/test-accessibility-and-fallbacks.ts"
   },
   "dependencies": {
     "next": "^15.1.0",

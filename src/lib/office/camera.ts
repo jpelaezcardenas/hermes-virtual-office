@@ -204,6 +204,10 @@ export interface OrbitControlsLike {
   update?: () => void
 }
 
+export interface ApplyPresetOptions {
+  reducedMotion?: boolean
+}
+
 /**
  * CameraManager controls the perspective camera & OrbitControls, applies presets,
  * and maintains the active preset calibrated across viewport resizes.
@@ -228,16 +232,24 @@ export class CameraManager {
     return getCameraPreset(this.activePresetId)
   }
 
-  applyPreset(id: CameraPresetId, animate = false): CameraPreset {
+  applyPreset(id: CameraPresetId, animate = false, options?: ApplyPresetOptions): CameraPreset {
     const preset = getCameraPreset(id)
     this.activePresetId = id
+
+    const prefersReducedMotion =
+      options?.reducedMotion ??
+      (typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+
+    const shouldAnimate = animate && !prefersReducedMotion
 
     if (this.animationFrameId !== null && typeof cancelAnimationFrame !== 'undefined') {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null
     }
 
-    if (!animate || typeof requestAnimationFrame === 'undefined') {
+    if (!shouldAnimate || typeof requestAnimationFrame === 'undefined') {
       this.camera.position.set(preset.position.x, preset.position.y, preset.position.z)
       this.controls.target.set(preset.target.x, preset.target.y, preset.target.z)
       this.camera.fov = preset.fov
