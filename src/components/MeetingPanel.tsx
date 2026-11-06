@@ -6,6 +6,12 @@ import Collapsible from './Collapsible'
 import FullPanel from './FullPanel'
 import ActionItems, { type Candidate } from './ActionItems'
 import { fetchJson } from '@/lib/api'
+import {
+  getMeetingModeInfo,
+  isFailedTurn,
+  formatTurnError,
+  boundTurns,
+} from '@/lib/office/monitor-transcript'
 
 /**
  * Meeting room.
@@ -194,27 +200,46 @@ export default function MeetingPanel({
   function Card({
     title,
     meta,
+    mode,
     highlight,
     onClick,
     disabled,
   }: {
     title: string
     meta: string
+    mode?: string
     highlight?: boolean
     onClick: () => void
     disabled?: boolean
   }) {
+    const modeInfo = getMeetingModeInfo(mode)
     return (
       <button
         className={`vp-meeting-row ${highlight ? 'on' : ''}`}
         onClick={onClick}
         disabled={disabled}
       >
-        <b>{title}</b>
+        <div className="flex items-center justify-between gap-2 w-full">
+          <b>{title}</b>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
+              modeInfo.isSynthetic
+                ? 'bg-amber-950/50 text-amber-300 border border-amber-600/40'
+                : 'bg-emerald-950/50 text-emerald-300 border border-emerald-500/40'
+            }`}
+          >
+            {modeInfo.shortBadge}
+          </span>
+        </div>
         <i>{meta}</i>
       </button>
     )
   }
+
+  const archiveItem = opened?.kind === 'archive' ? history.find((h) => h.id === opened.id) : null
+  const archiveModeInfo = getMeetingModeInfo(archiveItem?.mode)
+  const liveModeInfo = getMeetingModeInfo(meeting?.mode)
+  const boundedTurnsResult = boundTurns(meeting?.turns)
 
   return (
     <FullPanel
@@ -245,6 +270,19 @@ export default function MeetingPanel({
                 <div className="vp-muted">memuat transkrip…</div>
               ) : (
                 <>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        archiveModeInfo.isSynthetic
+                          ? 'bg-amber-950/60 text-amber-300 border border-amber-600/40'
+                          : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
+                      }`}
+                    >
+                      {archiveModeInfo.shortBadge}
+                    </span>
+                    <span className="text-xs text-slate-300">{archiveModeInfo.fullLabel}</span>
+                  </div>
+
                   <Collapsible
                     label={`Transkrip · ${archive.id}`}
                     text={archive.body}
@@ -286,11 +324,22 @@ export default function MeetingPanel({
                 </div>
                 <div className="vp-kv">
                   <span>mode</span>
-                  <b>
-                    {meeting.mode === 'a2a'
-                      ? 'A2A — pernyataan dari agent nyata via A2A'
-                      : 'simulasi — yang bicara LLM gateway, BUKAN agent'}
-                  </b>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
+                        liveModeInfo.isSynthetic
+                          ? 'bg-amber-950/60 text-amber-300 border border-amber-600/40'
+                          : 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40'
+                      }`}
+                    >
+                      {liveModeInfo.shortBadge}
+                    </span>
+                    <b className="text-xs">
+                      {liveModeInfo.isSynthetic
+                        ? 'Simulasi LLM Gateway — yang bicara LLM gateway, BUKAN agent nyata'
+                        : liveModeInfo.fullLabel}
+                    </b>
+                  </div>
                 </div>
                 <div className="vp-kv">
                   <span>peserta</span>
@@ -317,24 +366,49 @@ export default function MeetingPanel({
                   defaultOpen={!!live}
                   empty="belum ada giliran"
                 >
-                  <div className="flex flex-col gap-2">
-                    {meeting.turns.map((t, i) => (
-                      <div
-                        key={i}
-                        className={`vp-turn ${
-                          t.speaker === meeting.currentSpeaker && live ? 'talk' : ''
-                        }`}
-                      >
-                        <div className="vp-turn-who">
-                          {t.speaker}
-                          <i>
-                            {t.kind}
-                            {t.round ? ` · r${t.round}` : ''}
-                          </i>
+                  {boundedTurnsResult.notice && (
+                    <div className="text-xs text-amber-300/90 bg-amber-950/40 border border-amber-600/40 rounded px-2.5 py-1 mb-2 font-mono">
+                      {boundedTurnsResult.notice}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto overscroll-contain">
+                    {boundedTurnsResult.turns.map((t, i) => {
+                      const failed = isFailedTurn(t as any)
+                      const errMsg = failed ? formatTurnError(t as any) : null
+                      return (
+                        <div
+                          key={i}
+                          className={`vp-turn ${
+                            failed
+                              ? 'border-red-500/60 bg-red-950/30'
+                              : t.speaker === meeting.currentSpeaker && live
+                              ? 'talk'
+                              : ''
+                          }`}
+                        >
+                          <div className="vp-turn-who flex items-center justify-between">
+                            <span className="flex items-center gap-2">
+                              <span className={failed ? 'text-red-400 font-bold' : ''}>{t.speaker}</span>
+                              {failed && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-900/80 text-red-100 border border-red-500/50">
+                                  [GAGAL / FAILED]
+                                </span>
+                              )}
+                              <i>
+                                {t.kind}
+                                {t.round ? ` · r${t.round}` : ''}
+                              </i>
+                            </span>
+                          </div>
+                          <div className={`vp-turn-body ${failed ? 'text-red-200' : ''}`}>{t.text}</div>
+                          {failed && errMsg && errMsg !== t.text && (
+                            <div className="vp-err text-xs text-red-300 font-mono mt-1 pt-1 border-t border-red-500/20">
+                              Error: {errMsg}
+                            </div>
+                          )}
                         </div>
-                        <div className="vp-turn-body">{t.text}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </Collapsible>
 
@@ -386,6 +460,7 @@ export default function MeetingPanel({
                 <Card
                   title={meeting.topic || '(tanpa topik)'}
                   meta={`${meeting.state} · ${meeting.participants.length} peserta · ${meeting.turns.length} giliran`}
+                  mode={meeting.mode}
                   highlight={!!live}
                   onClick={() => setOpened({ kind: 'live', id: meeting.id })}
                 />
@@ -399,6 +474,7 @@ export default function MeetingPanel({
                   key={h.id}
                   title={h.topic}
                   meta={`${h.startedAt} · ${h.participants.length || '?'} peserta · ${h.turnCount} giliran`}
+                  mode={h.mode}
                   disabled={archBusy}
                   onClick={() => openArchive(h.id)}
                 />

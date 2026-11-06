@@ -5,6 +5,7 @@ import { useOffice } from '@/lib/store'
 import Collapsible from './Collapsible'
 import type { Agent, Task } from '@/types/hermes'
 import { fetchJson } from '@/lib/api'
+import { formatBoundedLog } from '@/lib/office/monitor-transcript'
 
 type RunInfo = {
   id: number
@@ -60,6 +61,8 @@ export default function PeekPanel() {
 
   if (desk == null) return null
 
+  const boundedLog = formatBoundedLog(log)
+
   async function act(action: 'steer' | 'cancel') {
     if (!task) return
     setBusy(true)
@@ -85,6 +88,9 @@ export default function PeekPanel() {
     <aside className="vp-panel right-0">
       <header className="vp-panel-head">
         <h2>Meja {desk + 1} · {agent?.displayName || 'kosong'}</h2>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+          [HANYA BACA] · Monitor
+        </span>
         <button className="vp-x" onClick={() => setPeek(null)} aria-label="Tutup">×</button>
       </header>
 
@@ -102,28 +108,47 @@ export default function PeekPanel() {
 
           {task && (
             <>
-              <Collapsible
-                label="Log terakhir"
-                text={log}
-                count={log.trim() ? log.trim().split('\n').length : undefined}
-                defaultOpen
-                empty="log masih kosong"
-              />
+              <div className="max-h-[50vh] overflow-y-auto overscroll-contain flex flex-col gap-2">
+                <Collapsible
+                  label={
+                    boundedLog.isTruncated
+                      ? `Log terakhir [HANYA BACA] (${boundedLog.displayedLines}/${boundedLog.totalLines})`
+                      : 'Log terakhir [HANYA BACA]'
+                  }
+                  text={boundedLog.text}
+                  count={boundedLog.displayedLines > 0 ? boundedLog.displayedLines : undefined}
+                  defaultOpen
+                  empty="log masih kosong"
+                />
+              </div>
 
               <Collapsible
                 label="Riwayat run"
                 count={runs.length}
                 empty="belum ada run"
               >
-                <div className="flex flex-col gap-1">
-                  {runs.slice(-4).reverse().map((r) => (
-                    <div key={r.id} className="vp-run">
-                      <b>{r.status}</b>
-                      {r.outcome ? <span> · {r.outcome}</span> : null}
-                      {r.summary ? <div className="vp-muted">{r.summary}</div> : null}
-                      {r.error ? <div className="vp-err">{r.error}</div> : null}
-                    </div>
-                  ))}
+                <div className="flex flex-col gap-1 max-h-[35vh] overflow-y-auto overscroll-contain">
+                  {runs.slice(-6).reverse().map((r) => {
+                    const isFailed = r.status === 'failed' || r.status === 'error' || Boolean(r.error)
+                    return (
+                      <div
+                        key={r.id}
+                        className={`vp-run ${isFailed ? 'border-l-red-500 bg-red-950/20 p-1.5 rounded' : ''}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <b>{r.status}</b>
+                          {isFailed && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-900/60 text-red-200 border border-red-500/40">
+                              [GAGAL / FAILED]
+                            </span>
+                          )}
+                          {r.outcome ? <span> · {r.outcome}</span> : null}
+                        </div>
+                        {r.summary ? <div className="vp-muted">{r.summary}</div> : null}
+                        {r.error ? <div className="vp-err text-red-300 font-mono text-xs mt-1">{r.error}</div> : null}
+                      </div>
+                    )
+                  })}
                 </div>
               </Collapsible>
 
