@@ -25,7 +25,8 @@
     "test:duty": "tsx scripts/test-duty-arbitration.ts",
     "test:huddles": "tsx scripts/test-correlated-huddle-and-reviewer-paths.ts",
     "test:bridge": "tsx scripts/test-office-bridge-events.ts",
-    "test:gym-janitor": "tsx scripts/test-gym-evidence-and-janitor-fixtures.ts"
+    "test:gym-janitor": "tsx scripts/test-gym-evidence-and-janitor-fixtures.ts",
+    "test:task-panel": "tsx scripts/test-task-provider-attempt-panel.ts"
   },
   "dependencies": {
     "next": "^15.1.0",

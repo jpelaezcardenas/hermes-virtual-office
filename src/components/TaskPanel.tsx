@@ -8,6 +8,10 @@ import type { Task } from '@/types/hermes'
 import { fetchJson } from '@/lib/api'
 import type { EvidenceItem, EvidenceVerdict } from '@/lib/hermes/evidence'
 import type { VerificationReading } from '@/lib/hermes/verification'
+import {
+  buildTaskCanonicalReadModel,
+  type TaskCanonicalReadModel,
+} from '@/lib/office/task-attempt'
 
 type RunInfo = {
   id: number
@@ -72,6 +76,8 @@ const STATUS_LABEL: Record<string, string> = {
   blocked: 'Terhambat',
   done: 'Selesai (klaim worker)',
   archived: 'Diarsipkan',
+  waiting: 'Menunggu prasyarat',
+  unknown: 'Status tidak dikenal',
 }
 
 /**
@@ -103,10 +109,14 @@ export default function TaskPanel() {
   const [verify, setVerify] = useState<Verification | null>(null)
   const [vfErr, setVfErr] = useState<string | null>(null)
   const [vfBusy, setVfBusy] = useState(false)
+  const [confirmDispatch, setConfirmDispatch] = useState(false)
 
   // `detail` first: it is the only payload with `parents`.
   const task: Task | undefined = detail?.id === taskId ? detail : tasks.find((t) => t.id === taskId)
   const agent = agents.find((a) => a.name === task?.assignee)
+  const readModel: TaskCanonicalReadModel | null = task
+    ? buildTaskCanonicalReadModel(task, runs, tasks)
+    : null
 
   useEffect(() => {
     if (!taskId) return
@@ -196,6 +206,7 @@ export default function TaskPanel() {
   useEffect(() => {
     setPick(task?.model || '')
     setNote(null)
+    setConfirmDispatch(false)
   }, [taskId, task?.model])
 
   if (!taskId) return null
@@ -204,6 +215,7 @@ export default function TaskPanel() {
   async function act(action: 'run' | 'promote' | 'set-model', extra: Record<string, unknown> = {}) {
     setBusy(true)
     setNote(null)
+    setConfirmDispatch(false)
     try {
       const res = await fetchJson<{ note?: string; mine?: boolean }>(
         `/api/hermes/tasks/${taskId}`,
@@ -255,8 +267,20 @@ export default function TaskPanel() {
             </div>
             <div className="vp-kv">
               <span>status</span>
-              <b>{STATUS_LABEL[task.status] || task.status}</b>
+              <b>
+                {STATUS_LABEL[readModel?.canonicalStatus || task.status] || readModel?.canonicalStatus || task.status}
+                {readModel?.isUnknownState && (
+                  <span className="vp-chip vp-chip-warn ml-2">raw: {readModel.rawSourceState}</span>
+                )}
+              </b>
             </div>
+            {readModel && (
+              <div className="vp-kv">
+                <span>provider eksekusi</span>
+                <b className="uppercase">{readModel.provider}</b>
+              </div>
+            )}
+
             <div className="vp-kv">
               <span>penanggung</span>
               <b>{task.assignee || '—'}{agent ? ` (${agent.role})` : ''}</b>
@@ -282,6 +306,50 @@ export default function TaskPanel() {
               </div>
             )}
             <code className="vp-code-block">{task.id}</code>
+
+            {readModel?.isUnknownState && (
+              <div className="p-2 border border-amber-500/50 bg-amber-500/10 rounded flex flex-col gap-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="vp-chip vp-chip-warn">Status Tidak Dikenal</span>
+                  <code className="text-xs bg-black/40 px-1 py-0.5 rounded">{readModel.rawSourceState}</code>
+                </div>
+                <div className="vp-muted text-xs">
+                  Status pekerjaan ini tidak dikenali oleh board resmi. Status mentah dipertahankan apa adanya dan tidak dijadikan antrean eksekusi.
+                </div>
+              </div>
+            )}
+
+            {readModel && readModel.waitingReasons.length > 0 && (
+              <div className="p-2 border border-blue-500/40 bg-blue-500/10 rounded flex flex-col gap-1 text-sm">
+                <div className="font-semibold text-blue-400">Menunggu Dependensi ({readModel.waitingReasons.length})</div>
+                <ul className="list-disc list-inside text-xs vp-muted flex flex-col gap-0.5">
+                  {readModel.waitingReasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {readModel && readModel.sourceLinks.length > 0 && (
+              <>
+                <div className="vp-sub">TAUTAN SUMBER OTORITATIF ({readModel.sourceLinks.length})</div>
+                <div className="flex flex-col gap-1">
+                  {readModel.sourceLinks.map((link, i) => (
+                    <a
+                      key={i}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="vp-run flex items-center justify-between text-left hover:brightness-110"
+                      title={`Buka ${link.label}`}
+                    >
+                      <span className="font-medium">{link.label}</span>
+                      <span className="vp-chip text-[10px] uppercase">{link.kind}</span>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* The board's own dependency edge. A parent parks its subtasks: the
                 dispatcher will not spawn them until every parent is `done`, and
@@ -319,21 +387,70 @@ export default function TaskPanel() {
                 there whenever the gateway is down. It lifts a parked task first,
                 so one click covers blocked/scheduled too. */}
             <div className="vp-sub">JALANKAN</div>
+            {confirmDispatch && (
+              <div className="p-3 border border-amber-500/40 bg-amber-500/10 rounded flex flex-col gap-2">
+                <div className="text-sm font-medium">
+                  Konfirmasi eksekusi tugas: <span className="font-bold">{readModel?.title || task.title}</span>?
+                </div>
+                <div className="text-xs vp-muted">
+                  Tindakan ini akan mengonfirmasi dispatch dan meminta dispatcher mengeksekusi tugas.
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    className="vp-btn"
+                    disabled={busy}
+                    onClick={() => {
+                      setConfirmDispatch(false)
+                      void act('run')
+                    }}
+                  >
+                    {busy ? '…' : 'Konfirmasi'}
+                  </button>
+                  <button
+                    className="vp-btn bg-neutral-700 hover:bg-neutral-600"
+                    disabled={busy}
+                    onClick={() => setConfirmDispatch(false)}
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 className="vp-btn"
-                disabled={busy || task.status === 'running' || task.status === 'review'}
-                onClick={() => act('run')}
-                title="Buka blokir bila perlu, lalu suruh dispatcher Hermes mengeksekusi tugas ini"
+                disabled={
+                  busy ||
+                  (readModel ? !readModel.canDispatch : (task.status === 'running' || task.status === 'review'))
+                }
+                onClick={() => setConfirmDispatch(true)}
+                title={
+                  readModel?.isUnknownState
+                    ? 'Status tidak dikenal tidak dapat dieksekusi'
+                    : readModel?.canonicalStatus === 'waiting'
+                    ? 'Tugas masih menunggu dependensi prasyarat'
+                    : 'Buka konfirmasi eksekusi tugas'
+                }
               >
                 {busy ? '…' : 'Jalankan'}
               </button>
             </div>
             {blocked && (
               <div className="vp-muted">
-                Status <b>{task.status}</b>: tombol Jalankan otomatis membuka blokir dulu.
+                Status <b>{task.status}</b>: tombol Jalankan otomatis membuka blokir dulu saat dikonfirmasi.
               </div>
             )}
+            {readModel?.canonicalStatus === 'waiting' && (
+              <div className="vp-muted text-xs">
+                Tugas berstatus menunggu prasyarat dan belum dapat dijalankan.
+              </div>
+            )}
+            {readModel?.isUnknownState && (
+              <div className="vp-muted text-xs">
+                Tugas berstatus tidak dikenal tidak dapat dieksekusi secara otomatis.
+              </div>
+            )}
+
 
             <div className="vp-sub">MODEL AGENT UNTUK TUGAS INI</div>
             <ModelPicker
