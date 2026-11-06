@@ -12,6 +12,7 @@ import CronPanel from './CronPanel'
 import SystemPanel from './SystemPanel'
 import BoardPanel from './BoardPanel'
 import ChatPanel from './ChatPanel'
+import ApprovalConflictPanel from './ApprovalConflictPanel'
 import NewTaskDialog from './NewTaskDialog'
 import KanbanModal from './KanbanModal'
 import DummySpawnDialog from './DummySpawnDialog'
@@ -53,6 +54,7 @@ export default function OfficeApp() {
   const [cronOpen, setCronOpen] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
+  const [approvalOpen, setApprovalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [boardOpen, setBoardOpen] = useState(false)
   const [nameOpen, setNameOpen] = useState(false)
@@ -230,6 +232,9 @@ export default function OfficeApp() {
           <button className="vp-btn vp-btn-ghost" onClick={() => setCronOpen(true)}>
             Cron
           </button>
+          <button className="vp-btn vp-btn-ghost" onClick={() => setApprovalOpen(true)}>
+            Persetujuan
+          </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setPanelOpen(true)}>
             Papan
           </button>
@@ -278,6 +283,7 @@ export default function OfficeApp() {
       />
       <CronPanel open={cronOpen} onClose={() => setCronOpen(false)} />
       <BoardPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
+      <ApprovalConflictPanel open={approvalOpen} onClose={() => setApprovalOpen(false)} />
       <SystemPanel open={systemOpen} onClose={() => setSystemOpen(false)} />
       <ChatPanel
         open={chatOpen}
