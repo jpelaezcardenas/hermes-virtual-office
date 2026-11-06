@@ -12,6 +12,7 @@ import {
   formatTurnError,
   boundTurns,
 } from '@/lib/office/monitor-transcript'
+import { getRoomDisplayLabel, meetingRoomFor } from '@/lib/office/room-routing'
 
 /**
  * Meeting room.
@@ -241,6 +242,30 @@ export default function MeetingPanel({
   const liveModeInfo = getMeetingModeInfo(meeting?.mode)
   const boundedTurnsResult = boundTurns(meeting?.turns)
 
+  const agentDivisions = new Map<string, string>()
+  for (const a of agents) {
+    if (a.division) agentDivisions.set(a.name, a.division)
+  }
+  let activeRoomLabel = 'Consejo Contexia'
+  if (meeting?.participants && meeting.participants.length > 0) {
+    try {
+      const rId = meetingRoomFor(meeting.participants, agentDivisions)
+      activeRoomLabel = getRoomDisplayLabel(rId)
+    } catch {
+      activeRoomLabel = 'Consejo Contexia'
+    }
+  }
+
+  let previewRoomLabel = 'Consejo Contexia'
+  if (picked.length > 0) {
+    try {
+      const rId = meetingRoomFor(picked, agentDivisions)
+      previewRoomLabel = getRoomDisplayLabel(rId)
+    } catch {
+      previewRoomLabel = 'Consejo Contexia'
+    }
+  }
+
   return (
     <FullPanel
       onClose={onClose}
@@ -314,6 +339,10 @@ export default function MeetingPanel({
                 <div className="vp-kv">
                   <span>topik</span>
                   <b>{meeting.topic || '(tanpa topik)'}</b>
+                </div>
+                <div className="vp-kv">
+                  <span>ruang</span>
+                  <b className="text-emerald-400">{activeRoomLabel}</b>
                 </div>
                 <div className="vp-kv">
                   <span>status</span>
@@ -511,6 +540,13 @@ export default function MeetingPanel({
             ))}
             {!agents.length && <span className="vp-muted">belum ada agent aktif</span>}
           </div>
+
+          {picked.length >= 2 && (
+            <div className="vp-kv">
+              <span>ruang rapat</span>
+              <b className="text-emerald-400">{previewRoomLabel}</b>
+            </div>
+          )}
 
           <label className="vp-sub">PEMBAWA ACARA</label>
           <select

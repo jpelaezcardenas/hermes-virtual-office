@@ -1,5 +1,12 @@
 import type { Activity } from './anim'
 import type { AgentDivision, AgentRole } from '@/types/hermes'
+import {
+  CONTEXIA_ROOM_LABELS,
+  getRoomDisplayLabel,
+  meetingRoomFor,
+  canEnterCeoRoom,
+  shouldCancelVisualTrip,
+} from './room-routing'
 
 /**
  * Office layout: the single source of truth for every placement.
@@ -279,17 +286,12 @@ export const DIVISION_MEETING_ROOM: Record<AgentDivision, MeetingRoomId> = {
  * need it (the sprite map seats people too), and the scene imports three.js, which
  * a 2D component must not pull in.
  */
-export function meetingRoomFor(
-  participants: string[],
-  divisions: Map<string, AgentDivision>,
-): MeetingRoomId {
-  const divs = new Set(participants.map((p) => divisions.get(p) ?? 'tech'))
-  if (divs.size === 1) {
-    const only = [...divs][0]
-    if (only !== 'exec') return DIVISION_MEETING_ROOM[only]
-  }
-  if (participants.length <= 4 && divs.has('exec')) return 'merapi'
-  return 'rinjani'
+export {
+  meetingRoomFor,
+  getRoomDisplayLabel,
+  CONTEXIA_ROOM_LABELS,
+  canEnterCeoRoom,
+  shouldCancelVisualTrip,
 }
 
 /* -------------------------------------------------------------- meeting --- */
@@ -2212,7 +2214,7 @@ export const ROOM_PLAQUES: {
   const at = PLAQUE_AT[id]
   return {
     id,
-    text: MEETING_SET.has(id) ? `R. MEETING ${r.label}` : r.label,
+    text: CONTEXIA_ROOM_LABELS[id]?.label ?? (MEETING_SET.has(id) ? `R. MEETING ${r.label}` : r.label),
     x: at.x,
     y: r.level * LEVEL_H + PLAQUE_Y,
     z: at.z,
