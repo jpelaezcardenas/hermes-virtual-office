@@ -50,6 +50,7 @@ import {
 import type { Agent, AgentDivision, AgentRole, Meeting, Task } from '@/types/hermes'
 import { dutyOf, a2aTarget, type Duty, type WorkSignals } from './duty'
 import { resolveReviewerTarget } from './huddle'
+import { hasGymEvidence } from './gym-janitor'
 import type { AvatarState } from './types'
 
 export type SceneAgent = AnimAgent & {
@@ -845,6 +846,10 @@ export function createScene(
       // does not merely get turned back at the door — the spot is never chosen, so it
       // walks somewhere it is welcome instead of bouncing off a wall.
       if (cand.level === 1 && insideCeoRoom(cand.x, cand.z) && !mayEnterCeoRoom(a.data.role)) continue
+      // GYM ACCESS: idle leisure without verified evidence cannot choose gym spots.
+      if (cand.act === 'benchpress' || cand.act === 'pullup' || cand.act === 'muscleup') {
+        if (!hasGymEvidence(a.data.name)) continue
+      }
       spot = cand
       a.wanderIndex = (a.wanderIndex + k + 1) % IDLE_SPOTS.length
       break
