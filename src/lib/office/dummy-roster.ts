@@ -16,6 +16,9 @@
 import { DESKS, RECEPTION, deskSeatWorld } from './layout'
 import type { AgentDivision } from '@/types/hermes'
 import type { DummySpec } from './db'
+import { getContexiaRoster } from './contexia-roster'
+
+export { getContexiaRoster }
 
 /** Readable placeholder names, per division, in desk order (manager first). */
 const DUMMY_NAMES: Record<AgentDivision, [string, string, string]> = {
@@ -30,7 +33,16 @@ const DUMMY_NAMES: Record<AgentDivision, [string, string, string]> = {
  * `dummy:tech:staff` would be written twice and one dummy would vanish. */
 const dummyId = (division: AgentDivision, deskIndex: number) => `dummy:${division}:${deskIndex}`
 
-export function dummyRoster(): DummySpec[] {
+export function dummyRoster(type?: 'contexia' | 'hermes_legacy'): DummySpec[] {
+  const rosterType =
+    type ??
+    (process.env.NEXT_PUBLIC_OFFICE_ROSTER === 'contexia' || process.env.OFFICE_ROSTER === 'contexia'
+      ? 'contexia'
+      : 'hermes_legacy')
+
+  if (rosterType === 'contexia') {
+    return getContexiaRoster()
+  }
   const out: DummySpec[] = []
 
   for (const division of ['tech', 'growth', 'content'] as AgentDivision[]) {
