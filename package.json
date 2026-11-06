@@ -22,7 +22,8 @@
     "test:camera": "tsx scripts/test-camera-presets-and-roof-rim.ts",
     "test:nav": "tsx scripts/test-polygon-path-and-navmesh.ts",
     "test:stairs": "tsx scripts/test-stair-interruption-and-replanning.ts",
-    "test:duty": "tsx scripts/test-duty-arbitration.ts"
+    "test:duty": "tsx scripts/test-duty-arbitration.ts",
+    "test:huddles": "tsx scripts/test-correlated-huddle-and-reviewer-paths.ts"
   },
   "dependencies": {
     "next": "^15.1.0",

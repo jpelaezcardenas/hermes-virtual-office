@@ -49,6 +49,7 @@ import {
 } from './layout'
 import type { Agent, AgentDivision, AgentRole, Meeting, Task } from '@/types/hermes'
 import { dutyOf, a2aTarget, type Duty, type WorkSignals } from './duty'
+import { resolveReviewerTarget } from './huddle'
 import type { AvatarState } from './types'
 
 export type SceneAgent = AnimAgent & {
@@ -506,6 +507,8 @@ export function createScene(
   let cronLive = false
   /** Pasangan A2A yang masih hidup: agent → peer + meja peer. */
   let a2aLive = new Map<string, { peer: string | null; peerDesk: number | null }>()
+  /** Latest Kanban tasks, used for reviewer destination resolution. */
+  let tasksList: Task[] = []
 
   function setWork(w: WorkSignals) {
     chatLive = new Set(w.chatLive)
@@ -750,9 +753,48 @@ export function createScene(
     }
 
     // 3. reviewer walk: a reviewing agent stands at the author's desk
-    if (duty === 'review' && myDesk) {
-      const desk = myDesk
-      {
+    if (duty === 'review') {
+      let taskToReview:
+        | Task
+        | { id: string; owner?: string; assignee?: string; author?: string }
+        | undefined
+      if (a.data.currentTaskId) {
+        taskToReview = tasksList.find((t) => t.id === a.data.currentTaskId)
+        if (!taskToReview) {
+          taskToReview = { id: a.data.currentTaskId }
+        }
+      }
+      if (!taskToReview) {
+        taskToReview = tasksList.find(
+          (t) =>
+            t.status === 'review' &&
+            ((t as any).reviewer === a.data.name ||
+              t.assignee === a.data.name ||
+              (t as any).owner === a.data.name),
+        )
+      }
+
+      let desk: Desk | null = null
+      if (taskToReview) {
+        const rosterMap = new Map<string, { deskIndex: number | null }>()
+        for (const av of avatars) {
+          rosterMap.set(av.data.name, { deskIndex: av.data.deskIndex ?? null })
+        }
+        const resolution = resolveReviewerTarget(
+          { name: a.data.name, deskIndex: a.data.deskIndex ?? null },
+          taskToReview,
+          rosterMap,
+        )
+        if (resolution.targetDeskIndex !== null) {
+          desk = deskByIndex(resolution.targetDeskIndex) ?? null
+        }
+      }
+
+      if (!desk) {
+        desk = myDesk
+      }
+
+      if (desk) {
         const v = visitorSpot(desk)
         a.target = new THREE.Vector3(v.x, 0, v.z)
         a.targetLevel = desk.level
@@ -764,6 +806,10 @@ export function createScene(
         a.holdSeat = false
         return
       }
+
+      a.target = null
+      a.activity = 'idle'
+      return
     }
 
     // 4. idle: WANDER. Rotate to the next free spot, walk there, rest, repeat.
@@ -1251,9 +1297,9 @@ export function createScene(
 
   }
 
-  /** Kept for the OfficeApp contract; the 3D view no longer draws cards. */
-  function setTasks(_tasks: Task[]) {
-    void _tasks
+  /** Kept for the OfficeApp contract and reviewer desk targeting. */
+  function setTasks(tasks: Task[]) {
+    tasksList = tasks || []
   }
 
   function setMeeting(m: Meeting | null) {
