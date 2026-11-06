@@ -17,6 +17,7 @@ import KanbanModal from './KanbanModal'
 import DummySpawnDialog from './DummySpawnDialog'
 import OfficeNameDialog from './OfficeNameDialog'
 import { startPolling, useOffice } from '@/lib/store'
+import { isDemoMode } from '@/lib/office/mode'
 import type { OfficeScene } from '@/lib/office/scene'
 import type { AgentDivision } from '@/types/hermes'
 
@@ -135,6 +136,14 @@ export default function OfficeApp() {
       <header ref={barRef} className="vp-topbar">
         <div className="vp-topbar-brand flex items-center gap-3">
           <span className="vp-logo">Hermes Office</span>
+          {isDemoMode() && (
+            <span
+              data-testid="office-demo-badge"
+              className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none"
+            >
+              DEMO
+            </span>
+          )}
           <span className={`vp-dot ${backendOnline ? 'ok' : 'bad'}`} />
           <span className="vp-muted vp-topbar-status">
             {backendOnline ? `${agents.length} agent · ${running} jalan · ${pct}% rilis` : 'backend offline'}

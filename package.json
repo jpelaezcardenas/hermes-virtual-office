@@ -12,7 +12,9 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "selftest": "tsx scripts/selftest.ts"
+    "selftest": "tsx scripts/selftest.ts",
+    "demo": "NEXT_PUBLIC_OFFICE_MODE=demo next dev --hostname 127.0.0.1 --port 3001",
+    "test:demo": "tsx scripts/test-demo-mode-boundary.ts"
   },
   "dependencies": {
     "next": "^15.1.0",
@@ -31,4 +33,4 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.0"
   }
-}
+}

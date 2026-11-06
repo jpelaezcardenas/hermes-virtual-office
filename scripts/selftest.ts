@@ -165,6 +165,7 @@ import {
 import { parseSoulMarker, soulFor } from '../src/lib/hermes/soul'
 import { listServedAgents, setServedAgentsConfigPath, upsertServedAgent, removeServedAgent } from '../src/lib/hermes/a2a-served'
 import * as THREE from 'three'
+import { sanitizeCredentialsForMode, checkActionAllowedInMode, handleConnectionLoss } from '../src/lib/office/mode'
 
 let failures = 0
 let checks = 0
@@ -6021,6 +6022,21 @@ void (async () => {
     if (!/profMissing|peer profil hilang/.test(docSrc2)) problems.push('doctor tak bedakan peer-profil hilang')
 
     check('a2a-call-1: kunci-hilang=FAIL + peer resolvable + URL-penuh di prompt + kabel serve/spawn/kill + peer-profil', problems.length === 0, problems.join(' | '))
+  }
+
+  // demo-boundary-1 (Task 9.1)
+  {
+    const demoSanitized = sanitizeCredentialsForMode({ AI_API_KEY: 'secret', HERMES_BIN: '/bin/hermes', host: 'demo' }, 'demo')
+    const actionDenied = checkActionAllowedInMode('promote', 'demo')
+    const lossStale = handleConnectionLoss('live', 'connected')
+    const demoOk = demoSanitized.AI_API_KEY === '' &&
+      demoSanitized.HERMES_BIN === '' &&
+      demoSanitized.host === 'demo' &&
+      actionDenied.allowed === false &&
+      actionDenied.reason === 'demo_mode_cannot_claim_live_work' &&
+      lossStale.fallbackToDemo === false &&
+      (lossStale.status === 'disconnected' || lossStale.status === 'stale')
+    check('demo-boundary-1: credentials sanitized + live work rejected in demo + live loss never falls back to demo', demoOk)
   }
 
   /* ------------------------------------------------------------- result -- */

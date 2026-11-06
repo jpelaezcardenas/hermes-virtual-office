@@ -26,6 +26,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { AgentRole } from '@/types/hermes'
+import { checkActionAllowedInMode } from '../office/mode'
 
 const HERMES = process.env.HERMES_HOME || join(homedir(), '.hermes')
 const ESTOP = join(HERMES, 'ESTOP')
@@ -64,6 +65,8 @@ export type ActionRequest = {
 export type Verdict = { allowed: true } | { allowed: false; why: string }
 
 export function checkAction(req: ActionRequest): Verdict {
+  const modeCheck = checkActionAllowedInMode(req.action)
+  if (!modeCheck.allowed) return { allowed: false, why: modeCheck.reason }
   const needsTask: ActionKind[] = ['unblock', 'promote', 'release']
   if (needsTask.includes(req.action)) {
     if (!req.taskId || !/^t_[0-9a-f]{8}$/.test(req.taskId)) {
@@ -181,6 +184,8 @@ export type AgentActionRequest = {
  * Aturan lama SELALU ikut dinilai di ujung, jadi izin per agent hanya bisa MENAMBAH larangan.
  */
 export function checkAgentAction(req: AgentActionRequest): Verdict {
+  const modeCheck = checkActionAllowedInMode(req.action)
+  if (!modeCheck.allowed) return { allowed: false, why: modeCheck.reason }
   const agent = (req.agent || '').trim()
   if (!agent) return { allowed: false, why: 'aksi atas nama agent butuh nama agent' }
   const perm = (AGENT_PERMISSIONS as Record<string, AgentPermission | undefined>)[req.role]
