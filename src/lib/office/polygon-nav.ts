@@ -17,8 +17,10 @@ import {
   FOOTPRINTS,
   OPENINGS,
   POOL,
+  STAIRS,
   STAIR_FOOT,
   STAIR_TOP,
+  stairHeightAt,
   LEVEL_BOUNDS,
   type Footprint,
 } from './layout'
@@ -27,6 +29,10 @@ import {
   type Waypoint,
   BODY_R,
   CELL,
+  onStairArea,
+  onStairFlight,
+  planRoute,
+  route,
 } from './nav'
 import {
   LEVELS,
@@ -44,6 +50,8 @@ export {
   OCCUPIED_LEVELS,
   CELL,
   BODY_R,
+  STAIRS,
+  stairHeightAt,
   STAIR_FOOT,
   STAIR_TOP,
   isOccupiedLevel,
@@ -387,6 +395,215 @@ export function validateMultilevelRoute(
         }
       }
     }
+  }
+
+  return { valid: true }
+}
+
+export type StairInterruptionValidationResult = {
+  valid: boolean
+  reason?: string
+  explanation?: string
+}
+
+/**
+ * Plan a safe route taking stair interruptions into account.
+ *
+ * Invariants:
+ * - If current position is on the stair flight or stair area (onStairArea or onStairFlight):
+ *   * If targetLevel === 0: the first waypoint leg moves strictly along the stair axis to STAIR_FOOT
+ *     on Level 0 (safe descent along the ramp), then routes from STAIR_FOOT to destination on Level 0.
+ *   * If targetLevel === 1: the first waypoint leg moves strictly along the stair axis to STAIR_TOP
+ *     on Level 1 (safe ascent to the landing), then routes from STAIR_TOP to destination on Level 1.
+ * - If current position is NOT on the stair, delegates cleanly to planRoute.
+ */
+export function planStairSafeRoute(
+  from: { x: number; z: number; level: Level },
+  target: { x: number; z: number; targetLevel: Level },
+): Waypoint[] {
+  const onStair =
+    onStairArea(from.x, from.z) ||
+    onStairFlight(from.x, from.z) ||
+    (from.x >= STAIRS.x1 - 0.2 &&
+      from.x <= STAIRS.x2 + 0.2 &&
+      from.z >= STAIRS.z1 - 0.2 &&
+      from.z <= STAIRS.z2 + 0.2)
+
+  if (!onStair) {
+    return planRoute(
+      { x: from.x, z: from.z, level: from.level, targetLevel: target.targetLevel },
+      { x: target.x, z: target.z },
+    )
+  }
+
+  // Interrupted while on the stair flight:
+  if (target.targetLevel === 0) {
+    // Safely descend along stair axis to STAIR_FOOT on Level 0
+    const footWp: Waypoint = { x: STAIR_FOOT.x, z: STAIR_FOOT.z, level: 0 }
+    const distToFoot = Math.hypot(target.x - STAIR_FOOT.x, target.z - STAIR_FOOT.z)
+    if (distToFoot < 0.2) {
+      return [footWp]
+    }
+    const fromFoot = route(STAIR_FOOT, { x: target.x, z: target.z }, 0)
+    const legs: Waypoint[] = [footWp]
+    for (const p of fromFoot) {
+      if (Math.hypot(p.x - STAIR_FOOT.x, p.z - STAIR_FOOT.z) > 0.3) {
+        legs.push({ x: p.x, z: p.z, level: 0 })
+      }
+    }
+    if (legs.length === 1) {
+      legs.push({ x: target.x, z: target.z, level: 0 })
+    }
+    return legs
+  } else {
+    // Safely ascend along stair axis to STAIR_TOP on Level 1
+    const topWp: Waypoint = { x: STAIR_TOP.x, z: STAIR_TOP.z, level: 1 }
+    const distToTop = Math.hypot(target.x - STAIR_TOP.x, target.z - STAIR_TOP.z)
+    if (distToTop < 0.2) {
+      return [topWp]
+    }
+    const fromTop = route(STAIR_TOP, { x: target.x, z: target.z }, 1)
+    const legs: Waypoint[] = [topWp]
+    for (const p of fromTop) {
+      if (Math.hypot(p.x - STAIR_TOP.x, p.z - STAIR_TOP.z) > 0.3) {
+        legs.push({ x: p.x, z: p.z, level: 1 })
+      }
+    }
+    if (legs.length === 1) {
+      legs.push({ x: target.x, z: target.z, level: 1 })
+    }
+    return legs
+  }
+}
+
+/**
+ * Validates a replanned route resulting from a stair interruption.
+ *
+ * Invariants:
+ * - If from is on the stair flight:
+ *   * Verifies the first transit waypoint is the proper stair landmark (STAIR_FOOT if targetLevel 0, STAIR_TOP if targetLevel 1).
+ *   * Rejects any lateral exit off the stair flight (x < STAIRS.x1 - 0.2 or x > STAIRS.x2 + 0.2 while z is within flight).
+ *   * Rejects vertical teleportation between floors mid-flight without reaching the stair landmark.
+ * - Rejects routing to invalid level >= 2 or negative.
+ */
+export function validateStairInterruption(
+  from: { x: number; z: number; level: number; y?: number },
+  route: Array<{ x: number; z: number; level: number; y?: number }>,
+  targetLevel: number,
+): StairInterruptionValidationResult {
+  // 1. Level boundary verification
+  if (targetLevel === 2) {
+    return {
+      valid: false,
+      reason: 'invalid_level_boundary',
+      explanation:
+        'Level 2 does not exist as an occupied floor; 6.8m datum is strictly a decorative roof rim trim.',
+    }
+  }
+  if (targetLevel > 2 || targetLevel < 0 || !isOccupiedLevel(targetLevel)) {
+    return {
+      valid: false,
+      reason: 'invalid_level_boundary',
+      explanation: 'Only levels 0 and 1 are valid occupied levels.',
+    }
+  }
+
+  if (!route || route.length === 0) {
+    return {
+      valid: false,
+      reason: 'empty_route',
+      explanation: 'Replanned route cannot be empty.',
+    }
+  }
+
+  const isOnStair =
+    onStairArea(from.x, from.z) ||
+    onStairFlight(from.x, from.z) ||
+    (from.x >= STAIRS.x1 - 0.2 &&
+      from.x <= STAIRS.x2 + 0.2 &&
+      from.z >= STAIRS.z1 - 0.2 &&
+      from.z <= STAIRS.z2 + 0.2)
+
+  if (isOnStair) {
+    const expectedLandmark = targetLevel === 0 ? STAIR_FOOT : STAIR_TOP
+    const expectedName = targetLevel === 0 ? 'STAIR_FOOT' : 'STAIR_TOP'
+    const expectedLvl = targetLevel
+    const tol = 0.6
+
+    let landmarkIndex = -1
+
+    for (let i = 0; i < route.length; i++) {
+      const wp = route[i]
+
+      // Check if this waypoint reaches the landmark
+      const distToLandmark = Math.hypot(wp.x - expectedLandmark.x, wp.z - expectedLandmark.z)
+      if (distToLandmark <= tol && wp.level === expectedLvl) {
+        landmarkIndex = i
+        break
+      }
+
+      // Waypoints before reaching landmark must stay strictly on the stair flight
+      const inFlightZ = wp.z >= STAIRS.z1 - 0.2 && wp.z <= STAIRS.z2 + 0.2
+      if (inFlightZ) {
+        if (wp.x < STAIRS.x1 - 0.2 || wp.x > STAIRS.x2 + 0.2) {
+          return {
+            valid: false,
+            reason: 'stair_lateral_clip',
+            explanation: `Lateral exit off stair flight at (${wp.x.toFixed(2)}, ${wp.z.toFixed(2)}) is strictly rejected.`,
+          }
+        }
+      }
+
+      // Mid-flight vertical teleport checks
+      const isMidFlightZ = wp.z > STAIRS.z1 + 0.5 && wp.z < STAIRS.z2 - 0.5
+      if (isMidFlightZ) {
+        if (wp.level !== from.level) {
+          return {
+            valid: false,
+            reason: 'stair_mid_flight_teleport',
+            explanation: `Vertical teleportation between floors mid-flight at z=${wp.z.toFixed(2)} without reaching landmark is strictly rejected.`,
+          }
+        }
+        if (wp.y !== undefined) {
+          const expectedRampH = stairHeightAt(wp.x, wp.z) ?? 0
+          if (Math.abs(wp.y - expectedRampH) > 0.5) {
+            return {
+              valid: false,
+              reason: 'stair_mid_flight_teleport',
+              explanation: `Mid-flight vertical height jump to ${wp.y.toFixed(2)}m is strictly rejected.`,
+            }
+          }
+        }
+      }
+
+      // If not in stair footprint and hasn't reached landmark:
+      const inStairFootprint =
+        wp.x >= STAIRS.x1 - 0.2 &&
+        wp.x <= STAIRS.x2 + 0.2 &&
+        wp.z >= STAIRS.z1 - 0.2 &&
+        wp.z <= STAIRS.z2 + 0.2
+      if (!inStairFootprint) {
+        return {
+          valid: false,
+          reason: 'stair_missing_landmark',
+          explanation: `Interruption on stair targeting Level ${targetLevel} must transit through ${expectedName} (${expectedLandmark.x}, ${expectedLandmark.z}) first.`,
+        }
+      }
+    }
+
+    if (landmarkIndex === -1) {
+      return {
+        valid: false,
+        reason: 'stair_missing_landmark',
+        explanation: `Interruption on stair targeting Level ${targetLevel} must transit through ${expectedName} (${expectedLandmark.x}, ${expectedLandmark.z}) first.`,
+      }
+    }
+  }
+
+  // Multilevel route check for solid walls
+  const multi = validateMultilevelRoute(route)
+  if (!multi.valid) {
+    return multi
   }
 
   return { valid: true }

@@ -20,7 +20,8 @@
     "test:props": "tsx scripts/test-props-materials-and-idle-inference.ts",
     "test:meetings": "tsx scripts/test-meeting-rooms-and-seating.ts",
     "test:camera": "tsx scripts/test-camera-presets-and-roof-rim.ts",
-    "test:nav": "tsx scripts/test-polygon-path-and-navmesh.ts"
+    "test:nav": "tsx scripts/test-polygon-path-and-navmesh.ts",
+    "test:stairs": "tsx scripts/test-stair-interruption-and-replanning.ts"
   },
   "dependencies": {
     "next": "^15.1.0",

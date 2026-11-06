@@ -25,6 +25,7 @@ import { buildAvatar } from './avatar'
 import { CameraManager, type CameraPresetId } from './camera'
 import { animate, type Activity, type AnimAgent } from './anim'
 import { blocked, onStairArea, planRoute, stairCentre, BODY_R, type Level, type Waypoint } from './nav'
+import { planStairSafeRoute } from './polygon-nav'
 import {
   CONFERENCE_CHAIRS,
   DOOR,
@@ -971,11 +972,12 @@ export function createScene(
         const destKey = `${a.target.x.toFixed(1)},${a.target.z.toFixed(1)}`
         if (destKey !== a.destKey || !a.path.length) {
           a.destKey = destKey
-          // LEVEL-AWARE: crossing floors goes through the stair shaft, and the
+          // LEVEL-AWARE & STAIR-SAFE: crossing floors goes through the stair shaft, and the
           // destination's floor comes from the TARGET, not from the body.
-          a.path = planRoute(
-            { x: g.position.x, z: g.position.z, level: a.level, targetLevel: a.targetLevel },
-            { x: a.target.x, z: a.target.z },
+          // Mid-stair interruptions safely replan through STAIR_FOOT or STAIR_TOP.
+          a.path = planStairSafeRoute(
+            { x: g.position.x, z: g.position.z, level: a.level },
+            { x: a.target.x, z: a.target.z, targetLevel: a.targetLevel },
           )
         }
 
