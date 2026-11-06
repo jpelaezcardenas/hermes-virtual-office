@@ -697,7 +697,13 @@ export async function startMeeting(input: {
   mode?: MeetingMode
 }): Promise<Meeting> {
   const topic = input.topic.trim().slice(0, 300)
-  const participants = [...new Set(input.participants.filter(Boolean))].slice(0, MAX_PARTICIPANTS)
+  const unique = [...new Set(input.participants.filter(Boolean))]
+  if (unique.length > MAX_PARTICIPANTS) {
+    throw new Error(
+      `jumlah peserta melebihi batas (${unique.length} > ${MAX_PARTICIPANTS}) — batas maksimal rapat adalah ${MAX_PARTICIPANTS} peserta`
+    )
+  }
+  const participants = unique
   if (!topic) throw new Error('topik wajib diisi')
   if (participants.length < 2) throw new Error('butuh minimal 2 peserta')
   if (busy) throw new Error('masih ada rapat yang berjalan — tunggu sampai selesai')
