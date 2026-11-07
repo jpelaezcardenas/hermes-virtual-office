@@ -52,10 +52,10 @@ async function runTests() {
   // ---------------------------------------------------------------------------
   console.log('1. Domain Tagging & Badges Configuration:')
   {
-    assert('Journal badge includes "Centinela Fiscal / Jurnal"', DOMAIN_BADGES.journal.esLabel.includes('Centinela Fiscal / Jurnal'))
-    assert('Payment badge includes "Caja Real / Pembayaran"', DOMAIN_BADGES.payment.esLabel.includes('Caja Real / Pembayaran'))
-    assert('CRM conflict badge includes "Ingresos Contexia / Konflik CRM"', DOMAIN_BADGES.crm_conflict.esLabel.includes('Ingresos Contexia / Konflik CRM'))
-    assert('Campaign badge includes "Kampanye"', DOMAIN_BADGES.campaign.esLabel.includes('Kampanye'))
+    assert('Journal badge includes "Centinela Fiscal"', DOMAIN_BADGES.journal.esLabel.includes('Centinela Fiscal'))
+    assert('Payment badge includes "Caja Real"', DOMAIN_BADGES.payment.esLabel.includes('Caja Real'))
+    assert('CRM conflict badge includes "Ingresos Contexia"', DOMAIN_BADGES.crm_conflict.esLabel.includes('Ingresos Contexia'))
+    assert('Campaign badge includes "Campañas"', DOMAIN_BADGES.campaign.esLabel.includes('Campaña'))
   }
 
   // ---------------------------------------------------------------------------

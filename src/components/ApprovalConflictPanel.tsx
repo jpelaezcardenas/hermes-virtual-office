@@ -55,19 +55,19 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
       decision,
       caller,
       expectedRevision,
-      `Keputusan oleh ${caller.name} via Panel Kantor`,
+      `Decisión por ${caller.name} vía Panel de Control`,
     )
 
     if (result.success && result.proposal) {
       setProposals((prev) => prev.map((p) => (p.id === proposal.id ? result.proposal! : p)))
       setNotification({
         type: 'ok',
-        message: `Proposal '${proposal.title}' berhasil ${decision === 'APPROVED' ? 'disetujui (APPROVED)' : 'ditolak (REJECTED)'}. Revisi #${result.proposal.revision} tercatat.`,
+        message: `Propuesta '${proposal.title}' ${decision === 'APPROVED' ? 'aprobada (APPROVED)' : 'rechazada (REJECTED)'} exitosamente. Revisión #${result.proposal.revision} registrada.`,
       })
     } else {
       setNotification({
         type: 'err',
-        message: `Gagal memutuskan proposal: ${result.failureReason || 'Kesalahan tidak diketahui'}`,
+        message: `Error al procesar propuesta: ${result.failureReason || 'Error desconocido'}`,
       })
     }
   }
@@ -83,12 +83,12 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
       setConflicts((prev) => prev.map((c) => (c.id === conflict.id ? result.conflict! : c)))
       setNotification({
         type: 'ok',
-        message: `Konflik CRM '${conflict.fieldName}' pada record ${conflict.recordId} berhasil diselesaikan (Pilihan: ${resolution.toUpperCase()}). Revisi #${result.conflict.revision}. Kontrak domain terjaga: tidak ada entri jurnal yang dibuat atau diubah.`,
+        message: `Conflicto CRM '${conflict.fieldName}' en registro ${conflict.recordId} resuelto exitosamente (Selección: ${resolution.toUpperCase()}). Revisión #${result.conflict.revision}. Separación de dominio preservada: no se crearon ni alteraron asientos contables.`,
       })
     } else {
       setNotification({
         type: 'err',
-        message: `Gagal menyelesaikan konflik CRM: ${result.failureReason || 'Kesalahan tidak diketahui'}`,
+        message: `Error al resolver conflicto CRM: ${result.failureReason || 'Error desconocido'}`,
       })
     }
   }
@@ -257,8 +257,8 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                 {/* Decision Info if decided */}
                 {p.decision && (
                   <div className="p-2 rounded bg-[#101820] border border-cyan-800/40 text-xs text-cyan-200">
-                    <div><b>Diputuskan oleh:</b> {p.decision.actorId} ({p.decision.actorRole}) · {p.decision.decision}</div>
-                    {p.decision.reason && <div className="text-[11px] text-cyan-300/80 mt-0.5">Alasan: {p.decision.reason}</div>}
+                    <div><b>Decidido por:</b> {p.decision.actorId} ({p.decision.actorRole}) · {p.decision.decision}</div>
+                    {p.decision.reason && <div className="text-[11px] text-cyan-300/80 mt-0.5">Motivo: {p.decision.reason}</div>}
                   </div>
                 )}
 
@@ -275,7 +275,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                         }
                         className="rounded border-[#334654] bg-[#0f1418] text-amber-500 focus:ring-0"
                       />
-                      <span>Uji Revisi Usang (Simulasikan Revisi #{p.revision - 1})</span>
+                      <span>Simular Revisión Obsoleta (Revisión #{p.revision - 1})</span>
                     </label>
 
                     {/* Action Buttons */}
@@ -293,13 +293,13 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                             onClick={() => handleDecideProposal(p, 'REJECTED')}
                             className="px-3 py-1 text-xs font-medium rounded bg-rose-900/40 text-rose-200 border border-rose-700/50 hover:bg-rose-800/60 transition"
                           >
-                            Tolak (Reject)
+                            Rechazar
                           </button>
                           <button
                             onClick={() => handleDecideProposal(p, 'APPROVED')}
                             className="px-3 py-1 text-xs font-medium rounded bg-emerald-700 text-white hover:bg-emerald-600 transition shadow"
                           >
-                            Setujui (Approve)
+                            Aprobar
                           </button>
                         </>
                       )}
@@ -316,9 +316,9 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
       {showConflicts && (
         <div className="flex flex-col gap-3 mt-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#8fa2ae] flex items-center justify-between">
-            <span>Resolusi Konflik Sinkronisasi CRM ({conflicts.length})</span>
+            <span>Resolución de Conflictos de Sincronización CRM ({conflicts.length})</span>
             <span className="text-[11px] font-normal normal-case text-amber-300">
-              Pilihan Manusia Eksplisit · Tidak Menyentuh Jurnal
+              Decisión Humana Explícita · No Afecta Libros Contables
             </span>
           </h3>
 
@@ -334,7 +334,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 text-[11px] font-semibold border rounded bg-amber-900/40 text-amber-300 border-amber-500/50">
-                      Ingresos Contexia / Konflik CRM
+                      Ingresos Contexia / Conflictos CRM
                     </span>
                     <span className="text-xs font-mono text-[#8fa2ae]">ID: {c.id}</span>
                   </div>
@@ -349,13 +349,13 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                           : 'bg-amber-950 text-amber-300 border border-amber-500/40'
                       }`}
                     >
-                      {c.status}
+                      {c.status === 'resolved' ? 'RESUELTO' : 'PENDIENTE'}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-xs text-[#a3b8c6]">
-                  Record target: <b className="text-white font-mono">{c.recordId}</b> · Field:{' '}
+                  Registro destino: <b className="text-white font-mono">{c.recordId}</b> · Campo:{' '}
                   <b className="text-amber-300 font-mono">{c.fieldName}</b>
                 </div>
 
@@ -365,7 +365,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                   <div className="p-3 rounded-md bg-[#0e1419] border border-[#26333d] flex flex-col justify-between gap-2">
                     <div>
                       <div className="flex items-center justify-between text-[11px] text-[#8fa2ae]">
-                        <span className="font-semibold text-cyan-300">Nilai Lokal (Internal CRM)</span>
+                        <span className="font-semibold text-cyan-300">Valor Local (CRM Interno)</span>
                         <span>{new Date(c.localUpdatedAt).toLocaleTimeString()}</span>
                       </div>
                       <div className="mt-2 text-xs font-medium text-white p-2 rounded bg-[#131b21] border border-[#222c35]">
@@ -377,7 +377,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                         onClick={() => handleResolveConflict(c, 'local')}
                         className="w-full mt-1 py-1.5 text-xs font-semibold rounded bg-cyan-800 hover:bg-cyan-700 text-white transition"
                       >
-                        Pilih Lokal
+                        Elegir Local
                       </button>
                     )}
                   </div>
@@ -386,7 +386,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                   <div className="p-3 rounded-md bg-[#0e1419] border border-[#26333d] flex flex-col justify-between gap-2">
                     <div>
                       <div className="flex items-center justify-between text-[11px] text-[#8fa2ae]">
-                        <span className="font-semibold text-amber-400">Nilai Remote (HubSpot API)</span>
+                        <span className="font-semibold text-amber-400">Valor Remoto (API HubSpot)</span>
                         <span>{new Date(c.remoteUpdatedAt).toLocaleTimeString()}</span>
                       </div>
                       <div className="mt-2 text-xs font-medium text-white p-2 rounded bg-[#131b21] border border-[#222c35]">
@@ -398,7 +398,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                         onClick={() => handleResolveConflict(c, 'remote')}
                         className="w-full mt-1 py-1.5 text-xs font-semibold rounded bg-amber-700 hover:bg-amber-600 text-white transition"
                       >
-                        Pilih HubSpot
+                        Elegir HubSpot
                       </button>
                     )}
                   </div>
@@ -407,7 +407,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                 {/* Resolved Info */}
                 {c.status === 'resolved' && (
                   <div className="p-2 rounded bg-[#101820] border border-emerald-800/40 text-xs text-emerald-200">
-                    <b>Terselesaikan:</b> Dipilih sumber <b className="uppercase">{c.resolution}</b> oleh{' '}
+                    <b>Resuelto:</b> Seleccionada fuente <b className="uppercase">{c.resolution}</b> por{' '}
                     {c.resolvedBy}.
                   </div>
                 )}
@@ -424,7 +424,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
                         }
                         className="rounded border-[#334654] bg-[#0f1418] text-amber-500 focus:ring-0"
                       />
-                      <span>Uji Revisi Usang (Simulasikan Revisi #{c.revision - 1})</span>
+                      <span>Simular Revisión Obsoleta (Revisión #{c.revision - 1})</span>
                     </label>
 
                     {!authCheck.allowed && (
