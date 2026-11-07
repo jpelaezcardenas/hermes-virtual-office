@@ -25,10 +25,14 @@ export async function GET() {
     const agents = visible(await listAgents(tasks, assignees, await blockedAssigneesFor(tasks)))
     return NextResponse.json({ tasks, agents })
   } catch (err) {
-    return NextResponse.json(
-      { error: { code: 'hermes_unavailable', message: (err as Error).message, status: 503 } },
-      { status: 503 },
-    )
+    // Fallback to Contexia agent roster if local CLI is unavailable
+    const contexiaAgents = [
+      { name: 'taty', displayName: 'Taty (Voz & Finanzas)', role: 'Contadora Amiga 24/7', status: 'idle', avatarId: 'fem-1', division: 'finance' },
+      { name: 'hermes', displayName: 'Hermes', role: 'Operador Principal & Orquestador', status: 'idle', avatarId: 'masc-1', division: 'operations' },
+      { name: 'manus', displayName: 'Manus', role: 'Investigación & Extracción Web', status: 'idle', avatarId: 'masc-2', division: 'engineering' },
+      { name: 'sell-machine', displayName: 'Sell Machine', role: 'Prospección & Ventas B2B', status: 'idle', avatarId: 'fem-2', division: 'growth' },
+    ]
+    return NextResponse.json({ tasks: [], agents: contexiaAgents })
   }
 }
 

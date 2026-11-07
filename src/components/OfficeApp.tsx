@@ -236,29 +236,29 @@ export default function OfficeApp() {
           )}
           <span className={`vp-dot ${backendOnline ? 'ok' : 'bad'}`} />
           <span className="vp-muted vp-topbar-status">
-            {backendOnline ? `${agents.length} agent · ${running} jalan · ${pct}% rilis` : 'backend offline'}
+            {backendOnline ? `${agents.length} agentes · ${running} activos · ${pct}% completado` : 'backend offline'}
           </span>
         </div>
 
         <nav className="vp-topbar-nav flex items-center gap-2" aria-label="Panel">
-          <button className="vp-btn vp-btn-ghost" onClick={() => setNewTaskOpen(true)}>+ Tugas</button>
+          <button className="vp-btn vp-btn-ghost" onClick={() => setNewTaskOpen(true)}>+ Tarea</button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setMeetOpen(true)}>
-            Ruang rapat{meeting && meeting.state === 'running' ? ' ●' : ''}
+            Reunión{meeting && meeting.state === 'running' ? ' ●' : ''}
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setAgentOpen(true)}>
-            Agent ({agents.length})
+            Agentes ({agents.length})
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setCronOpen(true)}>
             Cron
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setApprovalOpen(true)}>
-            Persetujuan
+            Aprobaciones
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setPanelOpen(true)}>
-            Papan
+            Tablero
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setSystemOpen(true)}>
-            Sistem
+            Sistema
           </button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setChatOpen(true)}>
             Chat
