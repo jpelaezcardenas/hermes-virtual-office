@@ -21,14 +21,14 @@ interface ApprovalConflictPanelProps {
 }
 
 const PRESET_CALLERS: UserContext[] = [
-  { id: 'usr-admin', name: 'Alif (Admin / Founder)', kind: 'human', role: 'admin' },
-  { id: 'usr-accountant', name: 'Siti (Akuntan / Centinela Fiscal)', kind: 'human', role: 'accountant' },
-  { id: 'usr-treasury', name: 'Budi (Treasury / Caja Real)', kind: 'human', role: 'treasury' },
-  { id: 'usr-sales-mgr', name: 'Dewi (Sales Manager / CRM Lead)', kind: 'human', role: 'sales_manager' },
-  { id: 'usr-marketing', name: 'Rian (Marketing Lead)', kind: 'human', role: 'marketing_lead' },
-  { id: 'usr-operator', name: 'Joko (Operator Tugas Biasa)', kind: 'human', role: 'operator' },
-  { id: 'agent-manus', name: 'Manus (Runtime Eksekusi Otomatis)', kind: 'agent', role: 'manus' },
-  { id: 'agent-codex', name: 'Codex (Runtime Eksekusi CLI)', kind: 'agent', role: 'codex' },
+  { id: 'usr-admin', name: 'Administrador / Founder (Contexia)', kind: 'human', role: 'admin' },
+  { id: 'usr-accountant', name: 'Taty (Contadora / Centinela Fiscal)', kind: 'human', role: 'accountant' },
+  { id: 'usr-treasury', name: 'Tesorería (Caja Real / Pagos)', kind: 'human', role: 'treasury' },
+  { id: 'usr-sales-mgr', name: 'Gerente Comercial (CRM & Leads)', kind: 'human', role: 'sales_manager' },
+  { id: 'usr-marketing', name: 'Líder de Marketing (Campañas)', kind: 'human', role: 'marketing_lead' },
+  { id: 'usr-operator', name: 'Operador General', kind: 'human', role: 'operator' },
+  { id: 'agent-manus', name: 'Manus (Agente Automatizado)', kind: 'agent', role: 'manus' },
+  { id: 'agent-codex', name: 'Codex (Agente CLI)', kind: 'agent', role: 'codex' },
 ]
 
 export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflictPanelProps) {
@@ -99,13 +99,13 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
   return (
     <FullPanel
       onClose={onClose}
-      label="Panel Persetujuan dan Konflik"
+      label="Panel de Aprobaciones y Conflictos"
       title={
         <div className="flex items-center gap-2">
-          <span>Antrean Persetujuan & Resolusi Konflik</span>
+          <span>Cola de Aprobaciones & Resolución de Conflictos</span>
           {totalPending > 0 && (
             <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-              {totalPending} Tertunda
+              {totalPending} Pendientes
             </span>
           )}
         </div>
@@ -115,9 +115,9 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
       {/* ---------------------------------------------------- Role Selector */}
       <div className="p-3 rounded-lg bg-[#1a232a] border border-[#26333d] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col">
-          <span className="text-xs uppercase font-semibold text-[#8fa2ae]">Simulasi Peran Pemanggil (Role-Sensitive)</span>
+          <span className="text-xs uppercase font-semibold text-[#8fa2ae]">Rol del Operador / Supervisor</span>
           <span className="text-xs text-[#8fa2ae]/80">
-            Kewenangan domain diverifikasi ketat: penyedia eksekusi (Manus/Codex) dan peran di luar domain ditolak.
+            Autoridad de dominio verificada: proveedores de ejecución y roles fuera del dominio son restringidos.
           </span>
         </div>
         <select
@@ -127,11 +127,11 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
             if (found) setCaller(found)
           }}
           className="bg-[#0f1418] border border-[#334654] text-white text-xs rounded-md px-3 py-1.5 focus:outline-none focus:border-amber-400"
-          aria-label="Pilih Peran Pemanggil"
+          aria-label="Seleccionar Rol"
         >
           {PRESET_CALLERS.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} — [{c.role}]
+              {c.name}
             </option>
           ))}
         </select>
@@ -166,7 +166,7 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
           }`}
           onClick={() => setTab('all')}
         >
-          Semua ({totalPending})
+          Todos ({totalPending})
         </button>
         {(['journal', 'payment', 'crm_conflict', 'campaign'] as ApprovalDomain[]).map((d) => {
           const cfg = DOMAIN_BADGES[d]
@@ -196,15 +196,15 @@ export default function ApprovalConflictPanel({ open, onClose }: ApprovalConflic
       {/* ---------------------------------------------------- Proposals List */}
       <div className="flex flex-col gap-3">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[#8fa2ae] flex items-center justify-between">
-          <span>Proposal Bisnis Tertunda ({filteredProposals.length})</span>
+          <span>Propuestas de Negocio Pendientes ({filteredProposals.length})</span>
           <span className="text-[11px] font-normal normal-case text-[#8fa2ae]/70">
-            Revisi & otoritas domain dilindungi
+            Revisión y autoridad de dominio protegidas
           </span>
         </h3>
 
         {filteredProposals.length === 0 ? (
           <div className="p-4 text-center text-xs text-[#8fa2ae] border border-dashed border-[#26333d] rounded-lg">
-            Tidak ada proposal dalam domain ini.
+            No hay propuestas pendientes en esta categoría.
           </div>
         ) : (
           filteredProposals.map((p) => {

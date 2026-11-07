@@ -130,13 +130,13 @@ export default function FullPanel({
           <div className={`flex items-center gap-2 ${slate ? 'text-xs' : ''}`}>
             {actions}
             {slate ? (
-              // Tampilan "tutup" Papan/Sistem dipertahankan; tombolnya sendiri 44×44
+              // Tampilan "cerrar" Papan/Sistem dipertahankan; tombolnya sendiri 44×44
               // supaya mudah ditekan jari, margin negatif menjaga tinggi header tetap.
-              <button className="vp-full-x -my-2.5" onClick={onClose} aria-label="Tutup">
-                <span className="rounded border border-slate-600 px-2 py-1 hover:bg-slate-800">tutup</span>
+              <button className="vp-full-x -my-2.5" onClick={onClose} aria-label="Cerrar">
+                <span className="rounded border border-slate-600 px-2 py-1 hover:bg-slate-800">cerrar</span>
               </button>
             ) : (
-              <button className="vp-x vp-full-x" onClick={onClose} aria-label="Tutup">
+              <button className="vp-x vp-full-x" onClick={onClose} aria-label="Cerrar">
                 ×
               </button>
             )}

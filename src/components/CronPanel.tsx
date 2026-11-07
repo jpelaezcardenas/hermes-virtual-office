@@ -60,13 +60,13 @@ function when(iso: string | null): string {
   const mins = Math.round(abs / 60_000)
   const label =
     abs < 60_000
-      ? 'sekarang'
+      ? 'ahora'
       : mins < 60
-        ? `${mins} mnt`
+        ? `${mins} min`
         : abs < 86_400_000
-          ? `${Math.round(mins / 60)} jam`
-          : `${Math.round(abs / 86_400_000)} hari`
-  return diff >= 0 ? `dalam ${label}` : `${label} lalu`
+          ? `${Math.round(mins / 60)} h`
+          : `${Math.round(abs / 86_400_000)} d`
+  return diff >= 0 ? `en ${label}` : `hace ${label}`
 }
 
 export default function CronPanel({
@@ -257,11 +257,11 @@ export default function CronPanel({
     <FullPanel
       onClose={onClose}
       label="Cron"
-      title={screen === 'new' ? 'Job baru' : 'Cron'}
+      title={screen === 'new' ? 'Nueva tarea programada' : 'Cron'}
       actions={
         screen === 'new' && (
           <button className="vp-chip-btn" onClick={() => setScreen('list')}>
-            ← Kembali
+            ← Volver
           </button>
         )
       }
@@ -269,20 +269,20 @@ export default function CronPanel({
     >
       {err && <div className="vp-err">{err}</div>}
       {note && <div className="vp-ok">{note}</div>}
-      {loading && <div className="vp-muted">memuat…</div>}
+      {loading && <div className="vp-muted">cargando…</div>}
       {/* jobs.json gagal dibaca = "tak terbaca", BUKAN "belum ada job" — pola jujur (bedakan baca-gagal dari kosong). */}
-      {jobsFailure && <div className="vp-err">jadwal tak terbaca (bukan &quot;tidak ada job&quot;): {jobsFailure}</div>}
+      {jobsFailure && <div className="vp-err">programación no legible: {jobsFailure}</div>}
 
       {screen === 'list' ? (
         <>
           <button className="vp-btn" onClick={() => setScreen('new')}>
-            + Buat job
+            + Crear tarea
           </button>
           <button className="vp-btn vp-btn-rosy" disabled={loading} onClick={load}>
-            Segarkan
+            Actualizar
           </button>
 
-          <div className="vp-sub">JOB ({jobs.length})</div>
+          <div className="vp-sub">TAREAS PROGRAMADAS ({jobs.length})</div>
           <div className="flex flex-col gap-2">
             {jobs.map((j) => (
               <div key={j.id} className={`vp-cron-card ${j.enabled ? 'on' : ''}`}>
@@ -292,10 +292,10 @@ export default function CronPanel({
                 </div>
                 <i className="vp-cron-sched">{j.schedule}</i>
                 <div className="vp-cron-meta">
-                  <span>{j.enabled ? `jalan ${when(j.nextRunAt)}` : 'dijeda'}</span>
-                  {j.lastRunAt && <span>terakhir {when(j.lastRunAt)}</span>}
+                  <span>{j.enabled ? `ejecuta ${when(j.nextRunAt)}` : 'pausada'}</span>
+                  {j.lastRunAt && <span>última ${when(j.lastRunAt)}</span>}
                   {j.failureStreak > 0 && (
-                    <span className="vp-cron-bad">gagal {j.failureStreak}×</span>
+                    <span className="vp-cron-bad">fallos {j.failureStreak}×</span>
                   )}
                 </div>
                 {j.prompt && <Collapsible label="Prompt" text={j.prompt} />}
@@ -310,7 +310,7 @@ export default function CronPanel({
                         candidates={items[j.id]}
                         roster={roster}
                         origin={{ kind: 'cron', ref: j.id }}
-                        label="TINDAK LANJUT → TUGAS"
+                        label="SEGUIMIENTO → CREAR TAREA"
                       />
                     ) : (
                       <button
@@ -321,7 +321,7 @@ export default function CronPanel({
                           void loadItems(j.id)
                         }}
                       >
-                        {itemsBusy === j.id ? '…' : 'Buat tugas dari kegagalan ini'}
+                        {itemsBusy === j.id ? '…' : 'Crear tarea correctiva de este fallo'}
                       </button>
                     )}
                   </>
@@ -331,39 +331,39 @@ export default function CronPanel({
                     <Guarded
                       id={j.id}
                       action="pause"
-                      label="Pause"
-                      confirmLabel="Yakin jeda?"
+                      label="Pausar"
+                      confirmLabel="¿Confirmar pausa?"
                     />
                   ) : (
                     <Guarded
                       id={j.id}
                       action="resume"
-                      label="Aktifkan"
-                      confirmLabel="Yakin aktifkan?"
+                      label="Activar"
+                      confirmLabel="¿Confirmar activación?"
                     />
                   )}
                   <Guarded
                     id={j.id}
                     action="run"
-                    label="Jalankan"
-                    confirmLabel="Yakin jalan?"
+                    label="Ejecutar"
+                    confirmLabel="¿Confirmar ejecución?"
                   />
                   <Guarded
                     id={j.id}
                     action="remove"
-                    label="Hapus"
-                    confirmLabel="Yakin hapus?"
+                    label="Eliminar"
+                    confirmLabel="¿Confirmar eliminación?"
                     className="vp-btn-danger"
                   />
                 </div>
               </div>
             ))}
-            {!jobs.length && !jobsFailure && <span className="vp-muted">belum ada job terjadwal</span>}
+            {!jobs.length && !jobsFailure && <span className="vp-muted">no hay tareas programadas</span>}
           </div>
 
           {runs.length > 0 && (
             <>
-              <div className="vp-sub">EKSEKUSI TERAKHIR ({runs.length})</div>
+              <div className="vp-sub">ÚLTIMAS EJECUCIONES ({runs.length})</div>
               <div className="flex flex-col gap-1">
                 {runs.slice(0, 12).map((r) => (
                   <div key={r.id} className="vp-cron-run">
@@ -382,7 +382,7 @@ export default function CronPanel({
         </>
       ) : (
         <>
-          <label className="vp-sub">JADWAL</label>
+          <label className="vp-sub">FRECUENCIA / CRON</label>
           <input
             className="vp-input"
             value={schedule}
@@ -390,21 +390,21 @@ export default function CronPanel({
             placeholder="30m  ·  every 2h  ·  0 9 * * *"
           />
 
-          <label className="vp-sub">PROMPT</label>
+          <label className="vp-sub">INSTRUCCIÓN / PROMPT</label>
           <textarea
             className="vp-input"
             rows={3}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="perintah"
+            placeholder="instrucción para el agente"
           />
 
-          <label className="vp-sub">NAMA (opsional)</label>
+          <label className="vp-sub">NOMBRE (opcional)</label>
           <input
             className="vp-input"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="cek rilis harian"
+            placeholder="ej: auditoria-metricas-diaria"
           />
 
           <label className="vp-check">
@@ -413,7 +413,7 @@ export default function CronPanel({
               checked={liveNow}
               onChange={(e) => setLiveNow(e.target.checked)}
             />
-            <span>langsung aktif (kalau tidak dicentang, job dibuat pause dulu)</span>
+            <span>activar inmediatamente (si no se marca, se crea en pausa)</span>
           </label>
 
           <button
@@ -421,7 +421,7 @@ export default function CronPanel({
             disabled={busy === 'create' || !schedule.trim() || !prompt.trim()}
             onClick={create}
           >
-            {busy === 'create' ? 'Membuat…' : 'Buat job'}
+            {busy === 'create' ? 'Creando…' : 'Crear tarea'}
           </button>
         </>
       )}

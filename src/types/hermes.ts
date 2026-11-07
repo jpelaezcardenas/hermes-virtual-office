@@ -125,10 +125,10 @@ export type Agent = {
 export type AgentDivision = 'exec' | 'tech' | 'growth' | 'content'
 
 export const DIVISION_LABEL: Record<AgentDivision, string> = {
-  exec: 'Eksekutif',
-  tech: 'Developer & Infrastructure',
-  growth: 'Marketing & SEO',
-  content: 'Content Creator & Affiliator',
+  exec: 'Dirección Ejecutiva',
+  tech: 'Desarrollo & Infraestructura',
+  growth: 'Crecimiento, Ventas & Marketing',
+  content: 'Contenido & Comunicaciones',
 }
 
 export type AgentRole =

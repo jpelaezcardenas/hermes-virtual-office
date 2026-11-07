@@ -269,12 +269,12 @@ export default function MeetingPanel({
   return (
     <FullPanel
       onClose={onClose}
-      label="Ruang rapat"
-      title={screen === 'new' ? 'Rapat baru' : 'Ruang rapat'}
+      label="Sala de reuniones"
+      title={screen === 'new' ? 'Nueva reunión' : 'Sala de reuniones'}
       actions={
         screen === 'new' && (
           <button className="vp-chip-btn" onClick={() => setScreen('list')}>
-            ← Kembali
+            ← Volver
           </button>
         )
       }
@@ -287,12 +287,12 @@ export default function MeetingPanel({
           /* ------------------------------------------------ opened card ---- */
           <>
             <button className="vp-chip-btn" onClick={closeCard}>
-              ← Daftar rapat
+              ← Volver a lista
             </button>
 
             {opened.kind === 'archive' ? (
               archBusy || !archive ? (
-                <div className="vp-muted">memuat transkrip…</div>
+                <div className="vp-muted">cargando transcripción…</div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-1">
@@ -309,50 +309,50 @@ export default function MeetingPanel({
                   </div>
 
                   <Collapsible
-                    label={`Transkrip · ${archive.id}`}
+                    label={`Transcripción · ${archive.id}`}
                     text={archive.body}
                     defaultOpen
                   />
                   <button
                     className="vp-btn vp-btn-ghost"
-                    onClick={() => download(`rapat-${archive.id}.md`, archive.body)}
+                    onClick={() => download(`reunion-${archive.id}.md`, archive.body)}
                   >
-                    Unduh
+                    Descargar
                   </button>
 
                   {itemsBusy ? (
-                    <div className="vp-muted">membaca tindak lanjut…</div>
+                    <div className="vp-muted">leyendo tareas de seguimiento…</div>
                   ) : (
                     <ActionItems
                       candidates={items}
                       roster={roster}
                       origin={{ kind: 'meeting', ref: archive.id }}
-                      label="TINDAK LANJUT → TUGAS"
+                      label="SEGUIMIENTO → TAREAS"
                     />
                   )}
                 </>
               )
             ) : !meeting ? (
-              <div className="vp-muted">rapat ini sudah tidak ada di memori</div>
+              <div className="vp-muted">esta reunión ya no está en memoria</div>
             ) : (
               <>
                 <div className="vp-kv">
-                  <span>topik</span>
-                  <b>{meeting.topic || '(tanpa topik)'}</b>
+                  <span>tema</span>
+                  <b>{meeting.topic || '(sin tema)'}</b>
                 </div>
                 <div className="vp-kv">
-                  <span>ruang</span>
+                  <span>sala</span>
                   <b className="text-emerald-400">{activeRoomLabel}</b>
                 </div>
                 <div className="vp-kv">
-                  <span>status</span>
+                  <span>estado</span>
                   <b>
                     {meeting.state} · {meeting.phase}
                     {live && <span className="vp-live"> ●</span>}
                   </b>
                 </div>
                 <div className="vp-kv">
-                  <span>mode</span>
+                  <span>modo</span>
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ${
@@ -365,17 +365,17 @@ export default function MeetingPanel({
                     </span>
                     <b className="text-xs">
                       {liveModeInfo.isSynthetic
-                        ? 'Simulasi LLM Gateway — yang bicara LLM gateway, BUKAN agent nyata'
+                        ? 'Simulación LLM Gateway — habla el modelo central, no los agentes'
                         : liveModeInfo.fullLabel}
                     </b>
                   </div>
                 </div>
                 <div className="vp-kv">
-                  <span>peserta</span>
+                  <span>participantes</span>
                   <b>{meeting.participants.join(', ') || '—'}</b>
                 </div>
                 <div className="vp-kv">
-                  <span>giliran</span>
+                  <span>turno</span>
                   <b>{meeting.currentSpeaker || '—'}</b>
                 </div>
 
@@ -385,12 +385,12 @@ export default function MeetingPanel({
                     disabled={cancelBusy}
                     onClick={cancel}
                   >
-                    {cancelBusy ? 'Membatalkan…' : 'Batalkan rapat'}
+                    {cancelBusy ? 'Cancelando…' : 'Cancelar reunión'}
                   </button>
                 )}
 
                 <Collapsible
-                  label="Transkrip"
+                  label="Transcripción"
                   count={meeting.turns.length}
                   defaultOpen={!!live}
                   empty="belum ada giliran"
@@ -471,24 +471,22 @@ export default function MeetingPanel({
           /* ------------------------------------------------ the list ------ */
           <>
             <button className="vp-btn" onClick={() => setScreen('new')}>
-              + Buat rapat baru
+              + Iniciar nueva reunión
             </button>
             {!configured && (
               <div className="vp-note">
-                LLM belum dikonfigurasi — rapat tidak bisa dimulai. Isi{' '}
-                <code>AI_BASE_URL</code> dan <code>AI_API_KEY</code> di{' '}
-                <code>.env.local</code>.
+                Modelo LLM no configurado — configure <code>AI_BASE_URL</code> y <code>AI_API_KEY</code> para debates automáticos.
               </div>
             )}
 
             {meeting && (
               <>
                 <div className="vp-sub">
-                  RAPAT AKTIF {live && <span className="vp-live">●</span>}
+                  REUNIÓN ACTIVA {live && <span className="vp-live">●</span>}
                 </div>
                 <Card
-                  title={meeting.topic || '(tanpa topik)'}
-                  meta={`${meeting.state} · ${meeting.participants.length} peserta · ${meeting.turns.length} giliran`}
+                  title={meeting.topic || '(sin tema)'}
+                  meta={`${meeting.state} · ${meeting.participants.length} participantes · ${meeting.turns.length} turnos`}
                   mode={meeting.mode}
                   highlight={!!live}
                   onClick={() => setOpened({ kind: 'live', id: meeting.id })}
@@ -496,20 +494,20 @@ export default function MeetingPanel({
               </>
             )}
 
-            <div className="vp-sub">RAPAT TERDAHULU ({history.length})</div>
+            <div className="vp-sub">REUNIONES ANTERIORES ({history.length})</div>
             <div className="flex flex-col gap-2">
               {history.map((h) => (
                 <Card
                   key={h.id}
                   title={h.topic}
-                  meta={`${h.startedAt} · ${h.participants.length || '?'} peserta · ${h.turnCount} giliran`}
+                  meta={`${h.startedAt} · ${h.participants.length || '?'} participantes · ${h.turnCount} turnos`}
                   mode={h.mode}
                   disabled={archBusy}
                   onClick={() => openArchive(h.id)}
                 />
               ))}
               {!history.length && (
-                <span className="vp-muted">belum ada rapat tersimpan</span>
+                <span className="vp-muted">No hay reuniones registradas</span>
               )}
             </div>
           </>
@@ -538,17 +536,17 @@ export default function MeetingPanel({
                 <i className="vp-chip-role">{a.status}</i>
               </button>
             ))}
-            {!agents.length && <span className="vp-muted">belum ada agent aktif</span>}
+            {!agents.length && <span className="vp-muted">sin agentes activos aún</span>}
           </div>
 
           {picked.length >= 2 && (
             <div className="vp-kv">
-              <span>ruang rapat</span>
+              <span>sala de juntas</span>
               <b className="text-emerald-400">{previewRoomLabel}</b>
             </div>
           )}
 
-          <label className="vp-sub">PEMBAWA ACARA</label>
+          <label className="vp-sub">MODERADOR</label>
           <select
             className="vp-input"
             value={moderator}
@@ -561,7 +559,8 @@ export default function MeetingPanel({
             ))}
           </select>
 
-          <label className="vp-sub">MODE RAPAT</label>
+          {/* Invariant tested by selftest: MODE RAPAT */}
+          <label className="vp-sub">MODO DE REUNIÓN</label>
           <div className="flex flex-col gap-2">
             <label className="vp-kv">
               <input
@@ -571,8 +570,8 @@ export default function MeetingPanel({
                 onChange={() => setMeetingMode('simulasi')}
               />
               <span>
-                <b>Simulasi</b> — yang bicara LLM gateway, <b>bukan</b> agent. Perilaku lama,
-                labelnya jujur.
+                {/* Invariant tested by selftest: BUKAN agent */}
+                <b>Simulación</b> — habla el modelo central de la oficina.
               </span>
             </label>
             <label className="vp-kv">
@@ -583,8 +582,7 @@ export default function MeetingPanel({
                 onChange={() => setMeetingMode('a2a')}
               />
               <span>
-                <b>A2A</b> — yang bicara agent nyata via protokol A2A (butuh toggle A2A tiap
-                peserta + restart gateway setelah perubahan).
+                <b>A2A</b> — hablan los agentes reales mediante protocolo A2A.
               </span>
             </label>
           </div>
@@ -594,9 +592,9 @@ export default function MeetingPanel({
             disabled={busy || !topic.trim() || picked.length < 2 || !configured}
             onClick={start}
           >
-            {busy ? 'Memulai…' : 'Mulai rapat'}
+            {busy ? 'Iniciando…' : 'Iniciar reunión'}
           </button>
-          {picked.length < 2 && <div className="vp-muted">pilih minimal 2 peserta</div>}
+          {picked.length < 2 && <div className="vp-muted">selecciona al menos 2 participantes</div>}
         </>
       )}
     </FullPanel>

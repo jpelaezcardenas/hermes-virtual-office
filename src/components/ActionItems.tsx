@@ -23,8 +23,8 @@ export default function ActionItems({
   candidates,
   origin,
   roster,
-  label = 'JADIKAN TUGAS',
-  empty = 'tidak ada item tindak lanjut',
+  label = 'CONVERTIR EN TAREAS',
+  empty = 'no hay elementos de seguimiento',
   onDone,
 }: {
   candidates: Candidate[]
@@ -152,16 +152,16 @@ export default function ActionItems({
                   )
                 }
               >
-                <option value="">— pilih penanggung —</option>
+                <option value="">— seleccionar responsable —</option>
                 {roster.map((n) => (
                   <option key={n} value={n}>
                     {n}
                   </option>
                 ))}
               </select>
-              {r.due && <span className="vp-chip">tenggat {r.due}</span>}
+              {r.due && <span className="vp-chip">plazo {r.due}</span>}
               {r.owner && !r.suggested && (
-                <span className="vp-chip vp-chip-warn">sumber menulis “{r.owner}”</span>
+                <span className="vp-chip vp-chip-warn">fuente indica “{r.owner}”</span>
               )}
             </div>
           </div>
@@ -169,7 +169,7 @@ export default function ActionItems({
       </div>
 
       <button className="vp-btn" disabled={busy || !chosen} onClick={create}>
-        {busy ? 'Membuat…' : `Buat ${chosen} tugas`}
+        {busy ? 'Creando…' : `Crear ${chosen} tareas`}
       </button>
 
       {note && <div className="vp-ok">{note}</div>}

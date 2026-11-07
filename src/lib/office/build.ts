@@ -407,7 +407,7 @@ function whiteboardTexture() {
   c.fillRect(0, 0, 1024, 512)
   // chalk column headings, evenly spaced
   c.fillStyle = '#f2fff0'
-  c.font = 'bold 44px ui-monospace, monospace'
+  c.font = 'bold 36px ui-monospace, monospace'
   c.textAlign = 'center'
   c.textBaseline = 'top'
   const colW = 1024 / BOARD_COLUMNS.length

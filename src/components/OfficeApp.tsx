@@ -31,7 +31,7 @@ import type { AgentDivision } from '@/types/hermes'
  */
 const Scene3D = dynamic(() => import('./Scene3D'), {
   ssr: false,
-  loading: () => <div className="absolute inset-0 grid place-items-center vp-muted">memuat ruangan…</div>,
+  loading: () => <div className="absolute inset-0 grid place-items-center vp-muted">Cargando oficina…</div>,
 })
 
 export default function OfficeApp() {
@@ -175,36 +175,36 @@ export default function OfficeApp() {
       {view === '3d' && (
         <aside
           className="absolute bottom-4 left-4 z-20 flex flex-col gap-1.5 p-2 rounded-xl bg-[#131b21ee] border border-[#26333d] shadow-lg backdrop-blur-md max-w-[calc(100vw-2rem)] overflow-x-auto"
-          aria-label="Preset Kamera"
+          aria-label="Vistas de Cámara"
         >
           <div className="flex items-center justify-between px-1 text-[11px] font-semibold tracking-wider uppercase text-[#8fa2ae]">
-            <span>Sudut Pandang</span>
+            <span>Ángulo de Visión</span>
             <span className="text-[10px] text-[#8fa2ae]/70 font-mono">4-7</span>
           </div>
-          <div className="vp-seg flex overflow-x-auto min-h-[44px] items-center" role="toolbar" aria-label="Pilihan Preset Kamera">
+          <div className="vp-seg flex overflow-x-auto min-h-[44px] items-center" role="toolbar" aria-label="Selección de Vista de Cámara">
             <button
               type="button"
               className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'overall' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('overall')}
-              title="Overall Office (Tombol 4)"
+              title="Oficina General (Tecla 4)"
               aria-pressed={activePreset === 'overall'}
             >
-              Overall
+              General
             </button>
             <button
               type="button"
               className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'courtyard' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('courtyard')}
-              title="Courtyard & Pool (Tombol 5)"
+              title="Patio & Piscina (Tecla 5)"
               aria-pressed={activePreset === 'courtyard'}
             >
-              Courtyard
+              Patio
             </button>
             <button
               type="button"
               className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'lounge' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('lounge')}
-              title="East Wing Lounge (Tombol 6)"
+              title="Sala / Lounge (Tecla 6)"
               aria-pressed={activePreset === 'lounge'}
             >
               Lounge
@@ -213,10 +213,10 @@ export default function OfficeApp() {
               type="button"
               className={`min-h-[40px] min-w-[44px] px-3 py-2 text-xs font-medium cursor-pointer ${activePreset === 'upper-floor' ? 'on' : ''}`}
               onClick={() => handleCameraPreset('upper-floor')}
-              title="Upper Floor & CEO (Tombol 7)"
+              title="Piso Superior & CEO (Tecla 7)"
               aria-pressed={activePreset === 'upper-floor'}
             >
-              Upper Floor
+              Piso Superior
             </button>
           </div>
         </aside>
@@ -224,7 +224,8 @@ export default function OfficeApp() {
 
       {/* ------------------------------------------------------- top bar */}
       <header ref={barRef} className="vp-topbar">
-        <div className="vp-topbar-brand flex items-center gap-3">
+        {/* Hidden per user request: "elimina esto" */}
+        <div className="hidden" aria-hidden="true">
           <span className="vp-logo">Hermes Office</span>
           {isDemoMode() && (
             <span
@@ -264,12 +265,33 @@ export default function OfficeApp() {
             Chat
           </button>
         </nav>
-        {/* Saklar tampilan sengaja di luar <nav>: di HP baris tombol bisa digeser ke
-            samping, dan pilihan 3D/Kanban/Sprite tidak boleh ikut hilang dari layar. */}
-        <div className={`vp-seg vp-topbar-view ${view === 'sprite' ? 'vp-sprite-toggle' : ''}`}>
-          <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
-          <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>Kanban</button>
-          <button className={view === 'sprite' ? 'on' : ''} onClick={() => setView('sprite')}>Sprite</button>
+
+        {/* View switcher and Fullscreen button arranged neatly side-by-side in top-right */}
+        <div className="vp-topbar-view flex items-center gap-2.5">
+          <div className={`vp-seg ${view === 'sprite' ? 'vp-sprite-toggle' : ''}`}>
+            <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
+            <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>Kanban</button>
+            <button className={view === 'sprite' ? 'on' : ''} onClick={() => setView('sprite')}>Sprite</button>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {
+                    window.open('https://office.contexia.online', '_blank', 'noopener,noreferrer')
+                  })
+                } else {
+                  document.exitFullscreen()
+                }
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 hover:border-[#2DD4BF]/50 text-xs font-semibold text-slate-200 transition active:scale-95 cursor-pointer"
+            title="Pantalla Completa"
+          >
+            <span className="material-symbols-outlined text-[15px] text-[#2DD4BF]">fullscreen</span>
+            <span>Pantalla Completa</span>
+          </button>
         </div>
       </header>
 
@@ -282,11 +304,11 @@ export default function OfficeApp() {
           <aside className="vp-card-float">
             <div className="flex items-center justify-between">
               <b>{a.displayName}</b>
-              <button className="vp-x" onClick={() => select(null)} aria-label="Tutup">×</button>
+              <button className="vp-x" onClick={() => select(null)} aria-label="Cerrar">×</button>
             </div>
-            <div className="vp-kv"><span>peran</span><b>{a.role}</b></div>
-            <div className="vp-kv"><span>status</span><b>{a.status}</b></div>
-            <div className="vp-kv"><span>tugas</span><b>{t?.title || '—'}</b></div>
+            <div className="vp-kv"><span>Rol</span><b>{a.role}</b></div>
+            <div className="vp-kv"><span>Estado</span><b>{a.status}</b></div>
+            <div className="vp-kv"><span>Tarea</span><b>{t?.title || '—'}</b></div>
           </aside>
         )
       })()}

@@ -36,13 +36,13 @@ export type KanbanColumnConfig = {
 }
 
 export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
-  { id: 'todo', label: 'TODO', statuses: ['todo', 'triage', 'ready', 'scheduled'], isExecutable: true },
-  { id: 'running', label: 'DIKERJAKAN', statuses: ['running'], isExecutable: false },
-  { id: 'review', label: 'REVIEW', statuses: ['review'], isExecutable: false },
-  { id: 'done', label: 'SELESAI', statuses: ['done'], isExecutable: false },
-  { id: 'blocked', label: 'TERHAMBAT', statuses: ['blocked'], isExecutable: false },
-  { id: 'archived', label: 'ARSIP', statuses: ['archived'], isExecutable: false },
-  { id: 'other', label: 'STATUS LAIN', statuses: [], isExecutable: false },
+  { id: 'todo', label: 'POR HACER', statuses: ['todo', 'triage', 'ready', 'scheduled'], isExecutable: true },
+  { id: 'running', label: 'EN CURSO', statuses: ['running'], isExecutable: false },
+  { id: 'review', label: 'REVISIÓN', statuses: ['review'], isExecutable: false },
+  { id: 'done', label: 'COMPLETADO', statuses: ['done'], isExecutable: false },
+  { id: 'blocked', label: 'BLOQUEADO', statuses: ['blocked'], isExecutable: false },
+  { id: 'archived', label: 'ARCHIVADO', statuses: ['archived'], isExecutable: false },
+  { id: 'other', label: 'OTRO', statuses: [], isExecutable: false },
 ]
 
 export const KNOWN = KANBAN_COLUMNS.flatMap((column) => column.statuses)

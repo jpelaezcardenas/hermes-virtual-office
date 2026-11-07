@@ -34,14 +34,14 @@ export default function NewTaskDialog() {
           priority,
         }),
       })
-      if (!res.ok || !res.data) throw new Error(res.error || 'gagal membuat tugas')
-      setNote(`Dibuat: ${res.data.task.id}`)
+      if (!res.ok || !res.data) throw new Error(res.error || 'error al crear tarea')
+      setNote(`Creado: ${res.data.task.id}`)
       setTitle('')
       setBody('')
       await load()
       setTimeout(() => setOpen(false), 900)
     } catch (e) {
-      setNote(`Gagal: ${(e as Error).message}`)
+      setNote(`Error: ${(e as Error).message}`)
     } finally {
       setBusy(false)
     }
@@ -51,19 +51,19 @@ export default function NewTaskDialog() {
     <div className="vp-modal-backdrop" onClick={() => setOpen(false)}>
       <div className="vp-modal" onClick={(e) => e.stopPropagation()}>
         <header className="vp-panel-head">
-          <h2>Tugas baru</h2>
-          <button className="vp-x" onClick={() => setOpen(false)} aria-label="Tutup">×</button>
+          <h2>Nueva tarea</h2>
+          <button className="vp-x" onClick={() => setOpen(false)} aria-label="Cerrar">×</button>
         </header>
         <div className="vp-pad flex flex-col gap-3">
-          <label className="vp-sub">JUDUL</label>
+          <label className="vp-sub">TÍTULO</label>
           <input
             className="vp-input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tambah test idempotensi refund"
+            placeholder="ej: Conciliación bancaria mensual"
           />
 
-          <label className="vp-sub">PENANGGUNG JAWAB</label>
+          <label className="vp-sub">RESPONSABLE / ASIGNADO A</label>
           <select
             className="vp-input"
             value={assignee}
@@ -74,16 +74,16 @@ export default function NewTaskDialog() {
             ))}
           </select>
 
-          <label className="vp-sub">DETAIL (OPSIONAL)</label>
+          <label className="vp-sub">DETALLES (OPCIONAL)</label>
           <textarea
             className="vp-input"
             rows={4}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Konteks, kriteria penerimaan"
+            placeholder="Contexto, alcance o criterios de aceptación..."
           />
 
-          <label className="vp-sub">PRIORITAS</label>
+          <label className="vp-sub">PRIORIDAD</label>
           <input
             className="vp-input"
             type="number"
@@ -92,7 +92,7 @@ export default function NewTaskDialog() {
           />
 
           <button className="vp-btn" disabled={busy || !title.trim()} onClick={submit}>
-            {busy ? 'Mengirim…' : 'Kirim ke antrean'}
+            {busy ? 'Enviando…' : 'Enviar a la cola'}
           </button>
           {note && <div className="vp-note">{note}</div>}
         </div>

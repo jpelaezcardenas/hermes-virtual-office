@@ -759,17 +759,17 @@ export default function SpriteOffice({ onSelect }: { onSelect: (name: string) =>
   }, [])
 
   return (
-    <div className="absolute inset-0 overflow-auto pt-14 vp-sprite-office" aria-label="Kantor pixel 2D">
+    <div className="absolute inset-0 overflow-auto pt-14 vp-sprite-office" aria-label="Oficina pixel 2D">
       <div className="vp-sprite-hud" aria-hidden="true">
-        <span>HERMES OFFICE</span><span>{agents.length} agent</span><span>{tasks.length} tugas</span><span>klik sprite untuk pilih</span>
+        <span>OFICINA CONTEXIA</span><span>{agents.length} agentes</span><span>{tasks.length} tareas</span><span>clic en sprite para seleccionar</span>
       </div>
       <canvas
         ref={canvasRef}
         className="block pixel-office"
         role="img"
-        aria-label="Peta kantor isometrik: ruang rapat, area kerja, lounge, dan lobi sama seperti mode 3D. Klik karakter untuk memilih agent."
+        aria-label="Mapa de oficina isométrica: sala de juntas, área de trabajo, lounge y lobby. Clic en personaje para seleccionar agente."
       />
-      <div className="sr-only" aria-label="Pilih agent">
+      <div className="sr-only" aria-label="Seleccionar agente">
         {agents.map((agent) => (
           <button key={agent.name} onClick={() => onSelect(agent.name)}>{agent.displayName}, {agent.status}</button>
         ))}

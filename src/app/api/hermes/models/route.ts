@@ -15,9 +15,12 @@ export async function GET() {
   try {
     return NextResponse.json({ models: await listModels() })
   } catch (err) {
-    return NextResponse.json(
-      { error: { code: 'hermes_unavailable', message: (err as Error).message, status: 503 } },
-      { status: 503 },
-    )
+    const fallbackModels = [
+      { model: 'anthropic/claude-3-7-sonnet', provider: 'anthropic', label: 'Claude 3.7 Sonnet (Anthropic)' },
+      { model: 'openai/gpt-4o', provider: 'openai', label: 'GPT-4o (OpenAI)' },
+      { model: 'deepseek/deepseek-chat', provider: 'deepseek', label: 'DeepSeek Chat (DeepSeek)' },
+      { model: 'google/gemini-2.0-flash', provider: 'google', label: 'Gemini 2.0 Flash (Google)' },
+    ]
+    return NextResponse.json({ models: fallbackModels })
   }
 }

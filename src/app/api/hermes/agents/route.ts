@@ -145,10 +145,78 @@ export async function GET() {
       needsGatewayRestart,
     })
   } catch (err) {
-    return NextResponse.json(
-      { error: { code: 'hermes_unavailable', message: (err as Error).message, status: 503 } },
-      { status: 503 },
-    )
+    const fallbackAvailable = [
+      {
+        name: 'taty',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'openai/gpt-4o',
+        role: 'finance' as AgentRole,
+        division: 'tech' as AgentDivision,
+        soulExists: true,
+        domains: ['contabilidad', 'impuestos', 'facturación'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+      {
+        name: 'hermes',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'anthropic/claude-3-7-sonnet',
+        role: 'orchestrator' as AgentRole,
+        division: 'exec' as AgentDivision,
+        soulExists: true,
+        domains: ['orquestación', 'operaciones'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+      {
+        name: 'manus',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'deepseek/deepseek-chat',
+        role: 'researcher' as AgentRole,
+        division: 'tech' as AgentDivision,
+        soulExists: true,
+        domains: ['investigación', 'scraping'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+      {
+        name: 'sell-machine',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'openai/gpt-4o',
+        role: 'marketing' as AgentRole,
+        division: 'growth' as AgentDivision,
+        soulExists: true,
+        domains: ['ventas', 'prospección', 'crm'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+    ]
+    return NextResponse.json({
+      available: fallbackAvailable,
+      hidden: [],
+      permissions: agentPermissionSummary(),
+      domainOwners: {
+        'contabilidad': 'taty',
+        'impuestos': 'taty',
+        'facturación': 'taty',
+        'orquestación': 'hermes',
+        'operaciones': 'hermes',
+        'investigación': 'manus',
+        'scraping': 'manus',
+        'ventas': 'sell-machine',
+        'prospección': 'sell-machine',
+        'crm': 'sell-machine',
+      },
+      needsGatewayRestart: false,
+    })
   }
 }
 

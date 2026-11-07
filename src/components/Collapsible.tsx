@@ -70,7 +70,7 @@ export default function Collapsible({
         <span className="vp-collapse-caret">{open ? '▾' : '▸'}</span>
         <span className="vp-collapse-label">{label}</span>
         {typeof count === 'number' && <span className="vp-collapse-count">{count}</span>}
-        <span className="vp-collapse-hint">{open ? 'sembunyikan' : 'tampilkan'}</span>
+        <span className="vp-collapse-hint">{open ? 'ocultar' : 'mostrar'}</span>
       </button>
 
       {open && (
@@ -80,7 +80,7 @@ export default function Collapsible({
           ) : has ? (
             <pre className="vp-pre vp-pre-block">{body}</pre>
           ) : (
-            <div className="vp-muted">{empty || 'kosong'}</div>
+            <div className="vp-muted">{empty || 'vacío'}</div>
           )}
         </div>
       )}

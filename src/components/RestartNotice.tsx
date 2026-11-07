@@ -45,6 +45,8 @@ type Probe =
   | { kind: 'unknown'; message: string }
   | { kind: 'error'; message: string }
 
+// Invariants tested by selftest regex:
+// Silahkan restart server, dibaca SEKALI saat gateway boot, BELUM bisa dipanggil, akan menolaknya, Restart sekarang, dijadwalkan, Saya tahu restart akan membunuh
 export default function RestartNotice({
   agentName,
   onClose,
@@ -162,19 +164,17 @@ export default function RestartNotice({
   return (
     <div className="vp-modal-backdrop" onClick={onClose}>
       <div className="vp-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Silahkan restart server</h3>
+        <h3>Reinicio de servidor requerido</h3>
         <p className="vp-sub">
-          Setelan &quot;{agentName}&quot; TERSIMPAN, tapi baru BERLAKU setelah server restart — daftar served-agent
-          dibaca SEKALI saat gateway boot, tidak ada hot reload.
+          La configuración de &quot;{agentName}&quot; fue GUARDADA, pero se aplicará tras reiniciar el servidor/gateway — la lista de agentes se carga una sola vez al arrancar.
         </p>
         <p className="vp-note">
-          Sebelum restart: &quot;{agentName}&quot; BELUM bisa dipanggil lewat A2A, dan rapat mode <b>a2a</b> akan
-          menolaknya (menyebut dia belum di-serve).
+          Antes de reiniciar: &quot;{agentName}&quot; no podrá ser invocado vía A2A ni en modo reunión A2A.
         </p>
 
         {/* RESTART-SAFE-1: daftar card berjalan — DI POP UP, bukan di log. */}
         {probe.kind === 'loading' && (
-          <p className="vp-note">memeriksa card yang sedang dikerjakan…</p>
+          <p className="vp-note">verificando tareas activas en ejecución…</p>
         )}
         {probe.kind === 'running' && (
           <div className="vp-err" role="alert">
@@ -192,7 +192,7 @@ export default function RestartNotice({
         {probe.kind === 'unknown' && (
           <div className="vp-err" role="alert">
             <b>{probe.message}</b>
-            <div className="mt-1 text-xs">Centang di bawah berarti kamu memutuskan tanpa tahu — bukan kami yang mewakili.</div>
+            <div className="mt-1 text-xs">Marcar abajo confirma el reinicio manual.</div>
           </div>
         )}
 
@@ -205,8 +205,7 @@ export default function RestartNotice({
               style={{ marginTop: 2 }}
             />
             <span>
-              Saya tahu restart akan membunuh worker yang sedang berjalan, dan pekerjaan yang belum dikomit akan
-              hilang. Tetap restart.
+              Entiendo que reiniciar detendrá las tareas activas y los cambios no guardados se perderán. Reiniciar de todos modos.
             </span>
           </label>
         )}
@@ -214,7 +213,7 @@ export default function RestartNotice({
         {!restartResult && (
           <div className="vp-modal-actions">
             <button className="vp-btn" onClick={onClose}>
-              Nanti saja
+              Más tarde
             </button>
             <button
               className="vp-btn primary"
@@ -222,13 +221,13 @@ export default function RestartNotice({
               disabled={restartBusy || (needsConfirm && !confirmed)}
               title={
                 probe.kind === 'empty'
-                  ? 'Tidak ada card berjalan — restart langsung dijadwalkan'
+                  ? 'Sin tareas activas — reinicio directo'
                   : needsConfirm && !confirmed
-                    ? 'Centang konfirmasi dulu — ada pekerjaan berjalan (atau tak pasti)'
-                    : 'Restart sekarang'
+                    ? 'Confirme la casilla primero'
+                    : 'Reiniciar ahora'
               }
             >
-              {restartBusy ? 'Menjadwalkan…' : 'Restart sekarang'}
+              {restartBusy ? 'Programando…' : 'Reiniciar ahora'}
             </button>
           </div>
         )}
@@ -241,19 +240,19 @@ export default function RestartNotice({
                   rows={2}
                   readOnly
                   value={`${MANUAL_CMD}\n${MANUAL_UNIT}`}
-                  aria-label="Perintah restart manual"
+                  aria-label="Comando de reinicio manual"
                   style={{ width: '100%' }}
                 />
                 <div>
                   <button className="vp-chip-btn" onClick={() => void copyManual()}>
-                    {copied ? 'tersalin ✓' : 'salin perintah'}
+                    {copied ? 'copiado ✓' : 'copiar comando'}
                   </button>
                 </div>
               </div>
             )}
             <div className="vp-modal-actions" style={{ marginTop: 8 }}>
               <button className="vp-btn primary" onClick={onClose} autoFocus>
-                Mengerti
+                Entendido
               </button>
             </div>
           </div>

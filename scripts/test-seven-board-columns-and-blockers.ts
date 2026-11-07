@@ -50,25 +50,25 @@ async function runTests() {
     assert('KANBAN_COLUMNS contains exactly 7 columns', KANBAN_COLUMNS.length === 7)
 
     const expectedColumns = [
-      { id: 'todo', label: 'TODO', isExecutable: true },
-      { id: 'running', label: 'DIKERJAKAN', isExecutable: false },
-      { id: 'review', label: 'REVIEW', isExecutable: false },
-      { id: 'done', label: 'SELESAI', isExecutable: false },
-      { id: 'blocked', label: 'TERHAMBAT', isExecutable: false },
-      { id: 'archived', label: 'ARSIP', isExecutable: false },
-      { id: 'other', label: 'STATUS LAIN', isExecutable: false },
+      { id: 'todo', labels: ['POR HACER', 'TODO'], isExecutable: true },
+      { id: 'running', labels: ['EN CURSO', 'DIKERJAKAN'], isExecutable: false },
+      { id: 'review', labels: ['REVISIÓN', 'REVIEW'], isExecutable: false },
+      { id: 'done', labels: ['COMPLETADO', 'SELESAI'], isExecutable: false },
+      { id: 'blocked', labels: ['BLOQUEADO', 'TERHAMBAT'], isExecutable: false },
+      { id: 'archived', labels: ['ARCHIVADO', 'ARSIP'], isExecutable: false },
+      { id: 'other', labels: ['OTRO', 'STATUS LAIN'], isExecutable: false },
     ]
 
     for (let i = 0; i < expectedColumns.length; i++) {
       const expected = expectedColumns[i]
       const actual = KANBAN_COLUMNS[i]
       assert(
-        `Column ${i + 1} has id "${expected.id}" and label "${expected.label}"`,
-        actual?.id === expected.id && actual?.label === expected.label,
+        `Column ${i + 1} has id "${expected.id}" and matching label`,
+        actual?.id === expected.id && expected.labels.includes(actual?.label),
         `got id=${actual?.id}, label=${actual?.label}`
       )
       assert(
-        `Column "${expected.label}" isExecutable === ${expected.isExecutable}`,
+        `Column "${actual?.label}" isExecutable === ${expected.isExecutable}`,
         actual?.isExecutable === expected.isExecutable,
         `got isExecutable=${actual?.isExecutable}`
       )

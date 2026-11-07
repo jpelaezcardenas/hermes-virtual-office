@@ -173,20 +173,19 @@ export default function DummySpawnDialog({
   return (
     <div className="vp-modal-backdrop" onClick={onClose}>
       <div className="vp-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Spawn agent di slot ini</h3>
+        <h3>Asignar agente en este puesto</h3>
         <p className="vp-sub">
-          Slot ini masih avatar dummy (gratis, tidak pakai token). Kalau di-spawn, dia jadi agent
-          Hermes asli dengan SOUL.md dan mulai bisa mengerjakan tugas — dan mulai pakai token.
+          Este puesto es un avatar virtual. Al asignarlo, se vinculará como agente activo para procesar tareas y participar en la oficina.
         </p>
         <p className="vp-note">
-          Otomatis terdaftar A2A; berlaku setelah gateway restart. Role slot ini: {roleForSlot(avatarId, division)}.
+          Rol asignado al puesto: {roleForSlot(avatarId, division)}.
         </p>
         <label className="vp-field">
-          <span>Nama agent</span>
+          <span>Nombre del agente</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="dev-1"
+            placeholder="ej: dev-1"
             disabled={busy || !!done}
             autoFocus
             onKeyDown={(e) => {
@@ -195,31 +194,31 @@ export default function DummySpawnDialog({
           />
         </label>
         <label className="vp-field">
-          <span>Model AI</span>
+          <span>Modelo de IA</span>
           <ModelPicker
             value={model}
             onChange={setModel}
             models={models}
             disabled={busy || !!done}
-            emptyLabel="bawaan Hermes"
-            title="Model untuk agent ini (kosong = bawaan Hermes)"
+            emptyLabel="Por defecto Contexia"
+            title="Modelo para este agente (vacío = por defecto)"
           />
         </label>
-        <p className="vp-muted">Divisi: {DIVISION_LABEL[division]}</p>
+        <p className="vp-muted">División: {DIVISION_LABEL[division]}</p>
         {note && <p className="vp-error">{note}</p>}
         {done && <div className="vp-ok">{done}</div>}
         <div className="vp-modal-actions">
           {done ? (
             <button className="vp-btn primary" onClick={onClose} autoFocus>
-              Tutup
+              Cerrar
             </button>
           ) : (
             <>
               <button className="vp-btn" onClick={onClose} disabled={busy}>
-                Batal
+                Cancelar
               </button>
               <button className="vp-btn primary" onClick={() => void spawn()} disabled={busy}>
-                {busy ? 'Membuat…' : 'Spawn agent'}
+                {busy ? 'Creando…' : 'Asignar agente'}
               </button>
             </>
           )}

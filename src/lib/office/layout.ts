@@ -911,7 +911,7 @@ export const KANBAN_BOARD = {
   w: 6.0,
   h: 2.4,
 }
-export const BOARD_COLUMNS = ['TODO', 'JALAN', 'REVIEW', 'SELESAI'] as const
+export const BOARD_COLUMNS = ['POR HACER', 'EN CURSO', 'REVISIÓN', 'COMPLETADO'] as const
 
 /** Reception counter in the lobby, facing the entrance. Kept OFF the centre axis
  * (which must stay clear from the door into the courtyard) — a visitor walks in,

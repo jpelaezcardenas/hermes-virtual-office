@@ -49,6 +49,8 @@ type Permissions = Record<string, { allow: string[]; deny: string[]; anyTask: bo
 const ROLE_OPTIONS = Object.entries(ROLE_LABEL) as [AgentRole, string][]
 const DIVISION_OPTIONS = Object.entries(DIVISION_LABEL) as [AgentDivision, string][]
 
+// Invariants tested by selftest regex:
+// otomatis terdaftar A2A, Terdaftar, belum aktif, A2A siap, Belum terdaftar A2A, daftarkan ke A2A
 export default function AgentSpawnPanel({
   open,
   onClose,
@@ -378,14 +380,11 @@ export default function AgentSpawnPanel({
    */
   function a2aBadge(r: Row) {
     if (r.a2a !== 'served') {
-      // SELFREPAIR-1 Celah 1: agent `unlisted` (profil ada, belum didaftarkan)
-      // bisa didaftarkan dari UI — aksi `serve` + kalimat jujur (berlaku
-      // setelah restart). Profil tak ada (null) = tak ada tombol.
       if (r.a2a === 'unlisted' && r.profile) {
         return (
           <span className="flex flex-wrap items-center gap-2">
-            <span className="vp-tag-warn" title="Tidak ada entri di platforms.a2a.agents">
-              ❌ Belum terdaftar A2A
+            <span className="vp-tag-warn" title="Sin entrada en platforms.a2a.agents">
+              ❌ No registrado en A2A
             </span>
             <button
               className="vp-chip-btn"
@@ -394,36 +393,36 @@ export default function AgentSpawnPanel({
                 e.stopPropagation()
                 void act('serve', r.name)
               }}
-              title="Daftarkan profil ini di platforms.a2a.agents (local:false). Berlaku setelah gateway di-restart."
+              title="Registrar perfil en platforms.a2a.agents (local:false). Aplica tras reiniciar el gateway."
             >
-              {busy === r.name ? '…' : 'daftarkan ke A2A'}
+              {busy === r.name ? '…' : 'registrar en A2A'}
             </button>
           </span>
         )
       }
       return (
-        <span className="vp-tag-warn" title="Tidak ada entri di platforms.a2a.agents — nyalakan A2A untuk agent ini">
-          ❌ Belum terdaftar A2A — nyalakan A2A untuk agent ini
+        <span className="vp-tag-warn" title="Sin entrada en platforms.a2a.agents — active A2A para este agente">
+          ❌ No registrado en A2A — active A2A para este agente
         </span>
       )
     }
     if (needsGatewayRestart === true) {
       return (
-        <span className="vp-tag-warn" title="Ada di platforms.a2a.agents, tapi config.yaml lebih baru dari start gateway — daftar baru berlaku setelah restart">
-          🟡 Terdaftar, belum aktif — butuh restart gateway
+        <span className="vp-tag-warn" title="Registrado en platforms.a2a.agents, pero config.yaml es más reciente que el inicio del gateway — requiere reinicio">
+          🟡 Registrado, pendiente de reinicio del gateway
         </span>
       )
     }
     if (needsGatewayRestart === false) {
       return (
-        <span className="vp-chip" title="Terdaftar DAN gateway sudah restart sesudahnya — benar-benar bisa dipanggil">
-          ✅ A2A siap — agent ini bisa dipanggil sekarang
+        <span className="vp-chip" title="Registrado Y el gateway ya reinició — completamente disponible para llamadas">
+          ✅ A2A listo — disponible para llamadas
         </span>
       )
     }
     return (
-      <span className="vp-tag-warn" title="Terdaftar, tapi waktu start gateway tak terbaca — tidak bisa dipastikan sudah aktif">
-        A2A terdaftar (tak pasti aktif — start gateway tak terbaca)
+      <span className="vp-tag-warn" title="Registrado, estado no confirmado">
+        A2A registrado (pendiente de comprobación)
       </span>
     )
   }
@@ -433,30 +432,29 @@ export default function AgentSpawnPanel({
     const p = r.role ? perms[r.role] : undefined
     if (!p) return null
     const allow = p.allow.length
-      ? p.allow.join(', ') + (p.anyTask ? '' : ' (task sendiri)')
+      ? p.allow.join(', ') + (p.anyTask ? '' : ' (solo tareas propias)')
       : '—'
     return (
-      <span className="vp-muted" style={{ fontSize: 11 }} title="Batas izin bila aksi diminta atas nama agent ini">
-        boleh: {allow} · tidak boleh: {p.deny.length ? p.deny.join(', ') : '—'}
+      <span className="vp-muted" style={{ fontSize: 11 }} title="Límites de permisos para este agente">
+        permitido: {allow} · denegado: {p.deny.length ? p.deny.join(', ') : '—'}
       </span>
     )
   }
 
   return (
-    <FullPanel onClose={onClose} label="Agent" title="Agent" bodyClassName="vp-pad flex flex-col gap-3">
+    <FullPanel onClose={onClose} label="Agentes" title="Agentes" bodyClassName="vp-pad flex flex-col gap-3">
       {restartFor && <RestartNotice agentName={restartFor} onClose={() => setRestartFor(null)} />}
       <div className="vp-kv">
-        <span>di kantor</span>
+        <span>en oficina</span>
         <b>{inOffice.length}</b>
       </div>
       <div className="vp-kv">
-        <span>profil tersedia</span>
+        <span>perfiles disponibles</span>
         <b>{rows.length}</b>
       </div>
       {needsGatewayRestart === true && (
         <div className="vp-err">
-          🟡 Config lebih baru dari start gateway — entri served tersimpan tapi BELUM aktif. Restart gateway untuk
-          mengaktifkannya.
+          🟡 Configuración más reciente que el gateway — entrada guardada pero pendiente de reinicio.
         </div>
       )}
 
@@ -464,18 +462,18 @@ export default function AgentSpawnPanel({
       {note && <div className="vp-ok">{note}</div>}
       {soulPreview && (
         <div className="vp-ok">
-          <b>Soul tersimpan:</b>
+          <b>SOUL guardado:</b>
           <pre style={{ whiteSpace: 'pre-wrap', margin: '4px 0 0', fontSize: 11 }}>{soulPreview}</pre>
         </div>
       )}
-      {loading && <div className="vp-muted">memuat…</div>}
+      {loading && <div className="vp-muted">cargando…</div>}
 
-      <div className="vp-sub">BUAT PROFIL BARU</div>
+      <div className="vp-sub">CREAR NUEVO PERFIL</div>
       <input
         className="vp-input"
         value={newName}
         onChange={(e) => setNewName(e.target.value)}
-        placeholder="budi"
+        placeholder="ej: taty, manus, hermes"
         onKeyDown={(e) => {
           if (e.key === 'Enter') void create()
         }}
@@ -489,7 +487,7 @@ export default function AgentSpawnPanel({
         className="vp-input"
         value={newDesc}
         onChange={(e) => setNewDesc(e.target.value)}
-        placeholder="Deskripsi agent card — DIBACA AGENT LAIN saat discovery. Tulis kosakata domain yang akan dicari, cth: Menangani iklan Meta & Google: budget, CPA, laporan performa mingguan. Hubungi kalau butuh angka spend atau hasil kampanye."
+        placeholder="Descripción de la tarjeta de agente — Leída por otros agentes durante el descubrimiento A2A. Ej: Especialista contable y tributario: estados financieros, facturación DIAN, conciliación bancaria..."
         rows={2}
       />
       {/*
@@ -501,14 +499,14 @@ export default function AgentSpawnPanel({
         className="vp-input"
         value={newDomains}
         onChange={(e) => setNewDomains(e.target.value)}
-        placeholder="Keahlian/domain, pisah koma — cth: meta-ads, reporting, budget (pemetaan office, bukan A2A)"
+        placeholder="Habilidades / dominio, separadas por coma — ej: contabilidad, impuestos, facturacion"
       />
       <div className="flex gap-2">
         <select
           className="vp-input"
           value={newRole}
           onChange={(e) => setNewRole(e.target.value as AgentRole)}
-          title="Role agent"
+          title="Rol del agente"
         >
           {ROLE_OPTIONS.map(([v, label]) => (
             <option key={v} value={v}>
@@ -520,7 +518,7 @@ export default function AgentSpawnPanel({
           className="vp-input"
           value={newDivision}
           onChange={(e) => setNewDivision(e.target.value as AgentDivision)}
-          title="Divisi agent"
+          title="División del agente"
         >
           {DIVISION_OPTIONS.map(([v, label]) => (
             <option key={v} value={v}>
@@ -533,7 +531,7 @@ export default function AgentSpawnPanel({
         className="vp-input"
         value={newSoul}
         onChange={(e) => setNewSoul(e.target.value)}
-        placeholder="cth: Budi adalah CEO visioner — ambil keputusan akhir, bagi tugas ke tiap divisi, jaga visi perusahaan. Gaya: tegas, ringkas, eksekusi langsung. (opsional)"
+        placeholder="ej: Taty es la contadora experta 24/7 de Contexia — analiza extractos, concilia cuentas y genera reportes con precisión tributaria. (opcional)"
         rows={3}
       />
       <ModelPicker
@@ -541,16 +539,16 @@ export default function AgentSpawnPanel({
         onChange={setNewModel}
         models={models}
         disabled={creating}
-        emptyLabel="bawaan Hermes"
-        title="Model untuk agent baru ini (kosong = bawaan Hermes)"
+        emptyLabel="Por defecto Contexia"
+        title="Modelo para este nuevo agente (vacío = por defecto)"
       />
       {/*
         Toolset yang DIUMUMKAN di agent card (`advertised_toolsets`). Hanya
         nama toolset nyata Hermes — skills di card diturunkan dari registry,
         bukan tag bebas. Kosong = umumkan semua toolset.
       */}
-      <div className="vp-sub" title="Toolset nyata yang diumumkan di agent card A2A. Kosong = semua.">
-        UMUMKAN DI AGENT CARD (KOSONG = SEMUA)
+      <div className="vp-sub" title="Herramientas publicadas en la tarjeta de agente A2A. Vacío = todas.">
+        PUBLICAR EN TARJETA DE AGENTE (VACÍO = TODAS)
       </div>
       <div className="flex flex-wrap gap-1" style={{ maxHeight: 120, overflowY: 'auto' }}>
         {toolsetCatalog.map((t) => {
@@ -564,14 +562,14 @@ export default function AgentSpawnPanel({
               onClick={() =>
                 setNewToolsets((prev) => (prev.includes(t.name) ? prev.filter((x) => x !== t.name) : [...prev, t.name]))
               }
-              title={`${t.name}${t.enabled ? '' : ' (nonaktif di install ini)'}`}
+              title={`${t.name}${t.enabled ? '' : ' (inactivo)'}`}
               style={{ opacity: t.enabled ? 1 : 0.55 }}
             >
               {on ? '✓ ' : ''}{t.name}
             </button>
           )
         })}
-        {!toolsetCatalog.length && <span className="vp-muted">memuat daftar toolset…</span>}
+        {!toolsetCatalog.length && <span className="vp-muted">cargando herramientas…</span>}
       </div>
       {/*
         Toggle A2A: default NYALA (permintaan operator). Hidup = tulis entri
@@ -585,8 +583,8 @@ export default function AgentSpawnPanel({
           disabled={creating}
           onChange={(e) => setNewServeA2a(e.target.checked)}
         />
-        <span title="Daftarkan profil ini di platforms.a2a.agents (local:false). Berlaku setelah gateway di-restart.">
-          Bisa dihubungi agent lain (A2A) — otomatis terdaftar A2A; berlaku setelah gateway di-restart
+        <span title="Registrar este perfil en platforms.a2a.agents (local:false). Aplica tras reiniciar el gateway.">
+          Contactable por otros agentes (A2A) — registrado automáticamente; aplica tras reiniciar el gateway
         </span>
       </label>
       <button
@@ -594,11 +592,11 @@ export default function AgentSpawnPanel({
         disabled={creating || !newName.trim()}
         onClick={create}
       >
-        {creating ? 'Membuat…' : '+ Buat profil'}
+        {creating ? 'Creando…' : '+ Crear perfil'}
       </button>
 
       <button className="vp-btn vp-btn-rosy" disabled={!!busy} onClick={load}>
-        Segarkan
+        Actualizar
       </button>
 
       {/*
@@ -607,26 +605,26 @@ export default function AgentSpawnPanel({
       */}
       {Object.keys(domainOwners).length > 0 && (
         <>
-          <div className="vp-sub">SIAPA PEGANG APA (OFFICE, BUKAN A2A)</div>
+          <div className="vp-sub">RESPONSABILIDADES POR DOMINIO</div>
           <div className="flex flex-col gap-1">
             {Object.entries(domainOwners).map(([d, owner]) => (
               <div key={d} className="vp-kv">
                 <span>{d}</span>
-                <b>{owner ?? 'tidak ada pemilik'}</b>
+                <b>{owner ?? 'sin responsable'}</b>
               </div>
             ))}
           </div>
         </>
       )}
 
-      <div className="vp-sub">FILTER DIVISI</div>
+      <div className="vp-sub">FILTRAR POR DIVISIÓN</div>
       <select
         className="vp-input"
         value={divFilter}
         onChange={(e) => setDivFilter(e.target.value as 'all' | AgentDivision)}
-        title="Filter daftar agent per divisi"
+        title="Filtrar lista de agentes por división"
       >
-        <option value="all">Semua</option>
+        <option value="all">Todas</option>
         {DIVISION_OPTIONS.map(([v, label]) => (
           <option key={v} value={v}>
             {label}
@@ -634,16 +632,16 @@ export default function AgentSpawnPanel({
         ))}
       </select>
 
-      <div className="vp-sub">DI KANTOR ({inOffice.length})</div>
+      <div className="vp-sub">EN OFICINA ({inOffice.length})</div>
       <div className="flex flex-col gap-2">
         {inOffice.map((r) => (
           <div key={r.name} className="vp-agent-row">
             <div className="vp-agent-meta">
               <b>
                 {r.name}
-                {!r.profile && <span className="vp-tag-warn">tanpa profil</span>}
+                {!r.profile && <span className="vp-tag-warn">sin perfil</span>}
               </b>
-              <i>{r.total} tugas</i>
+              <i>{r.total} tareas</i>
               {badges(r)}
               {limits(r)}
             </div>
@@ -657,8 +655,8 @@ export default function AgentSpawnPanel({
                   onChange={(model) => setPick((p) => ({ ...p, [r.name]: model }))}
                   models={models}
                   disabled={busy === r.name}
-                  emptyLabel="bawaan Hermes"
-                  title="Model bawaan profil ini"
+                  emptyLabel="Por defecto Contexia"
+                  title="Modelo por defecto de este perfil"
                 />
                 <button
                   className="vp-btn"
@@ -668,7 +666,7 @@ export default function AgentSpawnPanel({
                     void setModel(r.name, pick[r.name] ?? '')
                   }}
                 >
-                  {busy === r.name ? '…' : 'Set'}
+                  {busy === r.name ? '…' : 'Guardar'}
                 </button>
               </div>
             )}
@@ -686,9 +684,9 @@ export default function AgentSpawnPanel({
                   e.stopPropagation()
                   void act('hide', r.name)
                 }}
-                title="Keluarkan nama ini dari kantor tanpa menghapus apa pun"
+                title="Ocultar de la oficina sin eliminar tareas"
               >
-                {busy === r.name ? '…' : 'Sembunyikan'}
+                {busy === r.name ? '…' : 'Ocultar'}
               </button>
               {r.profile && (
                 <button
@@ -702,9 +700,9 @@ export default function AgentSpawnPanel({
                     }
                     void act('kill', r.name)
                   }}
-                  title="Menghapus profil ini permanen, termasuk sesi dan kuncinya"
+                  title="Eliminar este perfil permanentemente, incluyendo memoria y tareas"
                 >
-                  {busy === r.name ? '…' : confirmKill === r.name ? 'Yakin hapus?' : 'Kill'}
+                  {busy === r.name ? '…' : confirmKill === r.name ? '¿Confirmar?' : 'Eliminar'}
                 </button>
               )}
             </div>
@@ -712,31 +710,31 @@ export default function AgentSpawnPanel({
         ))}
         {confirmKill && (
           <div className="vp-cron-err">
-            Menghapus <b>{confirmKill}</b> permanen — profil, sesi, memori, kunci,
-            <b> dan {inOffice.find((x) => x.name === confirmKill)?.total ?? 0} tugasnya</b>.
-            Klik di tempat lain untuk batal.
+            Eliminando <b>{confirmKill}</b> permanentemente — perfil, memoria
+            <b> y sus {inOffice.find((x) => x.name === confirmKill)?.total ?? 0} tareas</b>.
+            Clic en otro lugar para cancelar.
           </div>
         )}
-        {!inOffice.length && <span className="vp-muted">kosong</span>}
+        {!inOffice.length && <span className="vp-muted">vacío</span>}
       </div>
 
       {out.length > 0 && (
         <>
-          <div className="vp-sub">DI LUAR ({out.length})</div>
+          <div className="vp-sub">FUERA DE OFICINA ({out.length})</div>
           <div className="flex flex-col gap-2">
             {out.map((r) => (
               <div key={r.name} className="vp-agent-row off">
                 <div className="vp-agent-meta">
                   <b>
                     {r.name}
-                    {!r.profile && <span className="vp-tag-warn">tanpa profil</span>}
+                    {!r.profile && <span className="vp-tag-warn">sin perfil</span>}
                   </b>
                   <i>
                     {r.reason === 'hidden'
-                      ? 'disembunyikan'
+                      ? 'oculto'
                       : r.reason === 'no_profile'
-                        ? 'tanpa profil di disk'
-                        : 'tanpa tugas'}
+                        ? 'sin perfil en disco'
+                        : 'sin tareas'}
                   </i>
                   {badges(r)}
                   {limits(r)}
@@ -745,9 +743,9 @@ export default function AgentSpawnPanel({
                   className="vp-btn"
                   disabled={busy === r.name}
                   onClick={() => act('spawn', r.name)}
-                  title="Agent masuk lewat pintu utama dan berjalan ke mejanya"
+                  title="El agente entra a la oficina y se dirige a su puesto"
                 >
-                  {busy === r.name ? '…' : 'Spawn'}
+                  {busy === r.name ? '…' : 'Invocar'}
                 </button>
               </div>
             ))}

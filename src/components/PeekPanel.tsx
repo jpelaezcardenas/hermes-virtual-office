@@ -78,7 +78,7 @@ export default function PeekPanel() {
       setMsg('')
       void load()
     } catch (e) {
-      setNote(`Gagal: ${(e as Error).message}`)
+      setNote(`Error: ${(e as Error).message}`)
     } finally {
       setBusy(false)
     }
@@ -87,22 +87,22 @@ export default function PeekPanel() {
   return (
     <aside className="vp-panel right-0">
       <header className="vp-panel-head">
-        <h2>Meja {desk + 1} · {agent?.displayName || 'kosong'}</h2>
+        <h2>Escritorio {desk + 1} · {agent?.displayName || 'vacío'}</h2>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-500/30 whitespace-nowrap">
-          [HANYA BACA] · Monitor
+          [SOLO LECTURA] · Monitor
         </span>
-        <button className="vp-x" onClick={() => setPeek(null)} aria-label="Tutup">×</button>
+        <button className="vp-x" onClick={() => setPeek(null)} aria-label="Cerrar">×</button>
       </header>
 
-      {!agent && <div className="vp-pad vp-muted">Tidak ada agent di meja ini.</div>}
+      {!agent && <div className="vp-pad vp-muted">No hay agente en este escritorio.</div>}
 
       {agent && (
         <div className="vp-pad flex flex-col gap-3">
           <div className="vp-kv">
-            <span>status</span><b>{agent.status}</b>
+            <span>estado</span><b>{agent.status}</b>
           </div>
           <div className="vp-kv">
-            <span>tugas</span><b>{task?.title || '— tidak ada tugas aktif —'}</b>
+            <span>tarea</span><b>{task?.title || '— sin tarea activa —'}</b>
           </div>
           {task && <code className="vp-code-block">{task.id}</code>}
 
@@ -112,20 +112,20 @@ export default function PeekPanel() {
                 <Collapsible
                   label={
                     boundedLog.isTruncated
-                      ? `Log terakhir [HANYA BACA] (${boundedLog.displayedLines}/${boundedLog.totalLines})`
-                      : 'Log terakhir [HANYA BACA]'
+                      ? `Último registro [SOLO LECTURA] (${boundedLog.displayedLines}/${boundedLog.totalLines})`
+                      : 'Último registro [SOLO LECTURA]'
                   }
                   text={boundedLog.text}
                   count={boundedLog.displayedLines > 0 ? boundedLog.displayedLines : undefined}
                   defaultOpen
-                  empty="log masih kosong"
+                  empty="registro vacío"
                 />
               </div>
 
               <Collapsible
-                label="Riwayat run"
+                label="Historial de ejecuciones"
                 count={runs.length}
-                empty="belum ada run"
+                empty="sin ejecuciones aún"
               >
                 <div className="flex flex-col gap-1 max-h-[35vh] overflow-y-auto overscroll-contain">
                   {runs.slice(-6).reverse().map((r) => {
@@ -139,7 +139,7 @@ export default function PeekPanel() {
                           <b>{r.status}</b>
                           {isFailed && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-900/60 text-red-200 border border-red-500/40">
-                              [GAGAL / FAILED]
+                              [FALLIDO]
                             </span>
                           )}
                           {r.outcome ? <span> · {r.outcome}</span> : null}
@@ -152,20 +152,20 @@ export default function PeekPanel() {
                 </div>
               </Collapsible>
 
-              <div className="vp-sub">ARAHKAN / HENTIKAN</div>
+              <div className="vp-sub">DIRIGIR / DETENER</div>
               <textarea
                 className="vp-input"
                 rows={3}
-                placeholder="fokus ke test postgres saja"
+                placeholder="ej. enfocarse en pruebas de backend"
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
               />
               <div className="flex gap-2">
                 <button className="vp-btn" disabled={busy || !msg.trim()} onClick={() => act('steer')}>
-                  Steer
+                  Dirigir
                 </button>
                 <button className="vp-btn vp-btn-warn" disabled={busy} onClick={() => act('cancel')}>
-                  Hentikan
+                  Detener
                 </button>
               </div>
               {note && <div className="vp-note">{note}</div>}
