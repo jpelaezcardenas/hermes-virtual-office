@@ -57,7 +57,7 @@ export default function ActionItems({
   async function create() {
     const chosen = rows.filter((r) => r.on && r.assignee)
     if (!chosen.length) {
-      setErr('pilih minimal satu item dan penanggungnya')
+      setErr('selecciona al menos un ítem y su responsable')
       return
     }
     setBusy(true)
@@ -78,7 +78,7 @@ export default function ActionItems({
             assignee: c.assignee,
             // The deadline belongs in the body, not the title: a title is read in a
             // narrow card and "— 2026-09-30" crowds it out.
-            body: [c.due ? `Tenggat: ${c.due}` : '', c.body || ''].filter(Boolean).join('\n\n') || undefined,
+            body: [c.due ? `Plazo: ${c.due}` : '', c.body || ''].filter(Boolean).join('\n\n') || undefined,
           })),
         }),
       })
@@ -86,10 +86,10 @@ export default function ActionItems({
       // Partial success is a valid outcome, so only a reply with NO created tasks is
       // a failure — the route answers 502 in exactly that case.
       if (!d?.created?.length) {
-        throw new Error(res.error || d?.error?.message || 'tidak ada tugas yang dibuat')
+        throw new Error(res.error || d?.error?.message || 'no se crearon tareas')
       }
       const n = d.created.length
-      setNote(d.failed?.length ? `${n} tugas dibuat, ${d.failed.length} gagal` : `${n} tugas dibuat`)
+      setNote(d.failed?.length ? `${n} tareas creadas, ${d.failed.length} fallidas` : `${n} tareas creadas`)
       setRows((prev) => prev.map((x) => (chosen.includes(x) ? { ...x, on: false } : x)))
       onDone?.(n)
     } catch (e) {

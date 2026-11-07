@@ -255,31 +255,31 @@ export default function TaskPanel() {
   const isUnexecutable = Boolean(isArchived || isUnknown)
 
   const dispatchDisabledReason = isUnexecutable
-    ? 'Tugas diarsipkan / status tidak dikenal tidak dapat dieksekusi'
+    ? 'Tarea archivada o con estado desconocido no se puede ejecutar'
     : readModel?.canonicalStatus === 'waiting'
-    ? 'Tugas masih menunggu dependensi prasyarat'
+    ? 'La tarea aún espera dependencias previas'
     : task?.status === 'running' || task?.status === 'review' || task?.status === 'done'
-    ? 'Tugas sedang berjalan, menunggu review, atau telah selesai'
-    : 'Buka konfirmasi eksekusi tugas'
+    ? 'La tarea está en curso, esperando revisión o ya completada'
+    : 'Abrir confirmación de ejecución de tarea'
 
   const blocked = task?.status === 'blocked' || task?.status === 'scheduled'
 
   return (
     <aside className="vp-panel left-0">
       <header className="vp-panel-head">
-        <h2>Detail tugas</h2>
-        <button className="vp-x" onClick={() => openTask(null)} aria-label="Tutup">
+        <h2>Detalle de la tarea</h2>
+        <button className="vp-x" onClick={() => openTask(null)} aria-label="Cerrar">
           ×
         </button>
       </header>
 
       <div className="vp-pad flex flex-col gap-3">
-        {!task && <div className="vp-muted">Tugas {taskId} tidak ada di board aktif.</div>}
+        {!task && <div className="vp-muted">La tarea {taskId} no existe en el tablero activo.</div>}
 
         {task && (
           <>
             <div className="vp-kv">
-              <span>judul</span>
+              <span>título</span>
               <b>{task.title}</b>
             </div>
             <div className="vp-kv">
