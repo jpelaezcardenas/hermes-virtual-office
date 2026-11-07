@@ -223,7 +223,7 @@ export default function OfficeApp() {
       )}
 
       {/* ------------------------------------------------------- top bar */}
-      <header ref={barRef} className="vp-topbar">
+      <header ref={barRef} className="vp-topbar !flex !flex-row !items-center !justify-between !flex-nowrap !gap-3 overflow-x-auto">
         {/* Hidden per user request: "elimina esto" */}
         <div className="hidden" aria-hidden="true">
           <span className="vp-logo">Hermes Office</span>
@@ -241,7 +241,7 @@ export default function OfficeApp() {
           </span>
         </div>
 
-        <nav className="vp-topbar-nav flex items-center gap-2" aria-label="Panel">
+        <nav className="vp-topbar-nav flex items-center gap-1.5 flex-nowrap shrink-0" aria-label="Panel">
           <button className="vp-btn vp-btn-ghost" onClick={() => setNewTaskOpen(true)}>+ Tarea</button>
           <button className="vp-btn vp-btn-ghost" onClick={() => setMeetOpen(true)}>
             Reunión{meeting && meeting.state === 'running' ? ' ●' : ''}
@@ -267,7 +267,7 @@ export default function OfficeApp() {
         </nav>
 
         {/* View switcher and Fullscreen button arranged neatly side-by-side in top-right */}
-        <div className="vp-topbar-view flex items-center gap-2.5">
+        <div className="vp-topbar-view flex items-center gap-2 shrink-0">
           <div className={`vp-seg ${view === 'sprite' ? 'vp-sprite-toggle' : ''}`}>
             <button className={view === '3d' ? 'on' : ''} onClick={() => setView('3d')}>3D</button>
             <button className={view === '2d' ? 'on' : ''} onClick={() => setView('2d')}>Kanban</button>
@@ -286,10 +286,12 @@ export default function OfficeApp() {
                 }
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 hover:border-[#2DD4BF]/50 text-xs font-semibold text-slate-200 transition active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 hover:border-[#2DD4BF]/50 text-xs font-semibold text-slate-200 transition active:scale-95 cursor-pointer whitespace-nowrap"
             title="Pantalla Completa"
           >
-            <span className="material-symbols-outlined text-[15px] text-[#2DD4BF]">fullscreen</span>
+            <svg className="w-3.5 h-3.5 text-[#2DD4BF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
             <span>Pantalla Completa</span>
           </button>
         </div>

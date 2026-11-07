@@ -25,12 +25,19 @@ export async function GET() {
     const agents = visible(await listAgents(tasks, assignees, await blockedAssigneesFor(tasks)))
     return NextResponse.json({ tasks, agents })
   } catch (err) {
-    // Fallback to Contexia agent roster if local CLI is unavailable
+    // Fallback to Contexia agent roster (11 native Contexia agents) if local CLI is unavailable
     const contexiaAgents = [
-      { name: 'taty', displayName: 'Taty (Voz & Finanzas)', role: 'Contadora Amiga 24/7', status: 'idle', avatarId: 'fem-1', division: 'finance' },
-      { name: 'hermes', displayName: 'Hermes', role: 'Operador Principal & Orquestador', status: 'idle', avatarId: 'masc-1', division: 'operations' },
-      { name: 'manus', displayName: 'Manus', role: 'Investigación & Extracción Web', status: 'idle', avatarId: 'masc-2', division: 'engineering' },
-      { name: 'sell-machine', displayName: 'Sell Machine', role: 'Prospección & Ventas B2B', status: 'idle', avatarId: 'fem-2', division: 'growth' },
+      { name: 'hermes', displayName: 'Hermes', role: 'orchestrator', division: 'exec', deskIndex: null, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
+      { name: 'taty', displayName: 'Taty', role: 'manager', division: 'content', deskIndex: 7, status: 'idle', model: 'openai/gpt-4o' },
+      { name: 'orchestrator', displayName: 'Orchestrator', role: 'orchestrator', division: 'exec', deskIndex: 9, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
+      { name: 'contexia-dev', displayName: 'Contexia Dev', role: 'backend', division: 'tech', deskIndex: 8, status: 'idle', model: 'deepseek/deepseek-chat' },
+      { name: 'kb', displayName: 'Kb', role: 'researcher', division: 'exec', deskIndex: 5, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
+      { name: 'social-ops', displayName: 'Social Ops', role: 'content', division: 'content', deskIndex: 6, status: 'idle', model: 'google/gemini-2.0-flash' },
+      { name: 'radar', displayName: 'Radar', role: 'marketing', division: 'growth', deskIndex: 4, status: 'idle', model: 'google/gemini-2.0-flash' },
+      { name: 'pulso', displayName: 'Pulso', role: 'manager', division: 'growth', deskIndex: 3, status: 'idle', model: 'openai/gpt-4o' },
+      { name: 'approval-queue', displayName: 'Approval Queue', role: 'qa', division: 'exec', deskIndex: 2, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
+      { name: 'centinela', displayName: 'Centinela', role: 'manager', division: 'tech', deskIndex: 0, status: 'idle', model: 'openai/gpt-4o' },
+      { name: 'auditoria', displayName: 'Auditoria', role: 'qa', division: 'tech', deskIndex: 1, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
     ]
     return NextResponse.json({ tasks: [], agents: contexiaAgents })
   }

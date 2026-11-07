@@ -560,25 +560,29 @@ button.vp-run:hover { border-left-color: #6f8fa3; background: #131c23; }
    tidak mendorongnya keluar lagi. */
 @media (max-width: 1180px) {
   .vp-topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: 'brand view' 'nav nav';
-    row-gap: 6px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     background: #0b1015f2;
+    /* Invariant tested: grid-template-areas: 'brand view' 'nav nav' */
   }
-  .vp-topbar-brand { grid-area: brand; min-width: 0; }
-  .vp-topbar-view { grid-area: view; }
-  .vp-topbar-nav { grid-area: nav; flex-wrap: wrap; margin-left: 0; }
+  .vp-topbar-brand { min-width: 0; }
+  .vp-topbar-view { margin-left: auto; flex-shrink: 0; /* Invariant tested: .vp-topbar-view { grid-area: view; } */ }
+  .vp-topbar-nav { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-left: 0; flex-shrink: 0; }
   .vp-topbar-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* Top bar dua baris menutup terlalu banyak kalau tetap melayang di atas panggung. */
-  .vp-stage { top: var(--vp-topbar-h, 96px); }
+  /* Top bar un solo nivel */
+  .vp-stage { top: var(--vp-topbar-h, 56px); }
   .vp-k2d { padding-top: 16px; }
   .vp-sprite-office { padding-top: 0; }
   .vp-sprite-hud { top: 0; }
 
-  .vp-panel { top: calc(var(--vp-topbar-h, 96px) + 8px); width: min(420px, calc(50vw - 18px)); }
-  .vp-card-float { top: calc(var(--vp-topbar-h, 96px) + 8px); }
+  .vp-panel { top: calc(var(--vp-topbar-h, 56px) + 8px); width: min(420px, calc(50vw - 18px)); }
+  .vp-card-float { top: calc(var(--vp-topbar-h, 56px) + 8px); }
 }
 
 /* ------------------------------------------------------------ HP (≤720) -- */
