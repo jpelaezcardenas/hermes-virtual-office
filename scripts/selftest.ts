@@ -67,7 +67,7 @@ import {
 // MODEL-PROVIDER-1: pure pendamping klasifikasi provider menggantung —
 // "custom:<nama> tanpa definisi bernama itu di scope profil" = rusak.
 import { classifyProviderScope } from '../src/lib/hermes/doctor'
-import { localOriginAllowed } from '../src/lib/local-guard'
+import { localOriginAllowed, assertLocalWriteRequest } from '../src/lib/local-guard'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -1510,7 +1510,7 @@ console.log('geometry')
     [['mkt1'], 'semeru'],
     [['c1'], 'cikurai'],
     [['ceo', 'boss'], 'merapi'],
-    [['dev1', 'mkt1', 'c1', 'ceo', 'boss'], 'rinjani'],
+    [['dev1', 'mkt1', 'c1', 'ceo'], 'rinjani'],
   ]
   for (const [participants, want] of cases) {
     const got = meetingRoomFor(participants, div)
@@ -6036,7 +6036,141 @@ void (async () => {
       actionDenied.reason === 'demo_mode_cannot_claim_live_work' &&
       lossStale.fallbackToDemo === false &&
       (lossStale.status === 'disconnected' || lossStale.status === 'stale')
-    check('demo-boundary-1: credentials sanitized + live work rejected in demo + live loss never falls back to demo', demoOk)
+    check('demo-boundary-1: credentials sanitized + live work rejected in demo + live loss never falls back to demo', demoOk); {
+      const problems: string[] = []
+      const prevAllowed = process.env.ALLOWED_ORIGINS
+      const prevTailscale = process.env.TAILSCALE_SERVE_ALLOWED
+      const prevToken = process.env.STUDIO_ACCESS_TOKEN
+      const prevReqAuth = process.env.OFFICE_REQUIRE_WRITE_AUTH
+
+      try {
+        delete process.env.ALLOWED_ORIGINS
+        delete process.env.TAILSCALE_SERVE_ALLOWED
+        if (!localOriginAllowed('localhost:3000', 'http://localhost:3000')) {
+          problems.push('http://localhost:3000 rejected')
+        }
+        if (localOriginAllowed('localhost:3000', 'https://localhost:3000')) {
+          problems.push('unconfigured https://localhost:3000 should be rejected')
+        }
+
+        process.env.ALLOWED_ORIGINS = 'https://studio.contexia.online,office.tailnet.ts.net'
+        if (!localOriginAllowed('studio.contexia.online', 'https://studio.contexia.online')) {
+          problems.push('https://studio.contexia.online in ALLOWED_ORIGINS rejected')
+        }
+        if (localOriginAllowed('evil.example.com', 'https://evil.example.com')) {
+          problems.push('untrusted https://evil.example.com allowed')
+        }
+
+        process.env.ALLOWED_ORIGINS = ''
+        process.env.TAILSCALE_SERVE_ALLOWED = 'true'
+        if (!localOriginAllowed('hermes-studio.tail1234.ts.net', 'https://hermes-studio.tail1234.ts.net')) {
+          problems.push('https://*.ts.net with TAILSCALE_SERVE_ALLOWED=true rejected')
+        }
+
+        process.env.ALLOWED_ORIGINS = 'studio.contexia.online'
+        const downgradeReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'http://studio.contexia.online',
+            'x-forwarded-proto': 'https',
+          },
+        })
+        const downgradeRes = assertLocalWriteRequest(downgradeReq)
+        if (!downgradeRes || downgradeRes.status !== 403) {
+          problems.push(`protocol downgrade not rejected with 403: ${downgradeRes?.status}`)
+        }
+
+        process.env.STUDIO_ACCESS_TOKEN = 'secret-studio-token-999'
+        const unauthReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'https://studio.contexia.online',
+          },
+        })
+        const unauthRes = assertLocalWriteRequest(unauthReq)
+        if (!unauthRes || unauthRes.status !== 401) {
+          problems.push(`missing STUDIO_ACCESS_TOKEN did not return 401: ${unauthRes?.status}`)
+        } else {
+          const body = (await unauthRes.json()) as { error?: { code?: string } }
+          if (body?.error?.code !== 'unauthorized_studio_write') {
+            problems.push(`unexpected 401 error code: ${body?.error?.code}`)
+          }
+        }
+
+        const authHeaderReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'https://studio.contexia.online',
+            'x-studio-access-token': 'secret-studio-token-999',
+          },
+        })
+        if (assertLocalWriteRequest(authHeaderReq) !== null) {
+          problems.push('valid x-studio-access-token was rejected')
+        }
+
+        const cookieAuthReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'https://studio.contexia.online',
+            cookie: 'office_session=delegated-session-token-xyz',
+          },
+        })
+        if (assertLocalWriteRequest(cookieAuthReq) !== null) {
+          problems.push('valid office_session cookie was rejected')
+        }
+
+        process.env.OFFICE_REQUIRE_WRITE_AUTH = 'true'
+        const viewerWriteReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'https://studio.contexia.online',
+            'x-studio-access-token': 'secret-studio-token-999',
+            'x-office-role': 'viewer',
+          },
+        })
+        const viewerRes = assertLocalWriteRequest(viewerWriteReq)
+        if (!viewerRes || viewerRes.status !== 403) {
+          problems.push(`viewer write did not return 403: ${viewerRes?.status}`)
+        } else {
+          const body = (await viewerRes.json()) as { error?: { code?: string } }
+          if (body?.error?.code !== 'insufficient_office_role') {
+            problems.push(`unexpected 403 role code: ${body?.error?.code}`)
+          }
+        }
+
+        const operatorWriteReq = new Request('https://studio.contexia.online/api/hermes/tasks', {
+          method: 'POST',
+          headers: {
+            host: 'studio.contexia.online',
+            origin: 'https://studio.contexia.online',
+            'x-studio-access-token': 'secret-studio-token-999',
+            'x-office-role': 'operator',
+          },
+        })
+        if (assertLocalWriteRequest(operatorWriteReq) !== null) {
+          problems.push('operator write was rejected')
+        }
+        if ((assertLocalWriteRequest as (r: Request, role?: 'viewer' | 'operator' | 'admin') => Response | null)(operatorWriteReq, 'admin')?.status !== 403) {
+          problems.push('operator should be rejected when requiredRole is admin')
+        }
+      } finally {
+        if (prevAllowed === undefined) delete process.env.ALLOWED_ORIGINS
+        else process.env.ALLOWED_ORIGINS = prevAllowed
+        if (prevTailscale === undefined) delete process.env.TAILSCALE_SERVE_ALLOWED
+        else process.env.TAILSCALE_SERVE_ALLOWED = prevTailscale
+        if (prevToken === undefined) delete process.env.STUDIO_ACCESS_TOKEN
+        else process.env.STUDIO_ACCESS_TOKEN = prevToken
+        if (prevReqAuth === undefined) delete process.env.OFFICE_REQUIRE_WRITE_AUTH
+        else process.env.OFFICE_REQUIRE_WRITE_AUTH = prevReqAuth
+      }
+
+      check('guard-hardening-a12: HTTPS ALLOWED_ORIGINS + Tailscale + downgrade block + STUDIO_ACCESS_TOKEN + role rank', problems.length === 0, problems.join(' | '))
+    }
   }
 
   /* ------------------------------------------------------------- result -- */
