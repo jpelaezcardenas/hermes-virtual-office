@@ -25,10 +25,10 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const HERMES = process.env.HERMES_HOME || join(homedir(), '.hermes')
-const STATE_DB = join(HERMES, 'state.db')
-const PRICING_CACHE = join(HERMES, 'models_dev_cache.json')
-const ERROR_LOG = join(HERMES, 'logs', 'errors.log')
+const getHermesHome = () => process.env.HERMES_HOME || join(homedir(), '.hermes')
+const getStateDbPath = () => join(getHermesHome(), 'state.db')
+const PRICING_CACHE = join(getHermesHome(), 'models_dev_cache.json')
+const ERROR_LOG = join(getHermesHome(), 'logs', 'errors.log')
 
 /**
  * Buka read-only: panel ini melapor, tidak boleh bisa merusak apa pun.
@@ -37,9 +37,10 @@ const ERROR_LOG = join(HERMES, 'logs', 'errors.log')
  * lain, dan menambah `better-sqlite3` berarti satu langkah build native hanya untuk membaca.
  */
 function openState(): DatabaseSync | null {
-  if (!existsSync(STATE_DB)) return null
+  const stateDbPath = getStateDbPath()
+  if (!existsSync(stateDbPath)) return null
   try {
-    return new DatabaseSync(STATE_DB, { readOnly: true })
+    return new DatabaseSync(stateDbPath, { readOnly: true })
   } catch {
     return null
   }
@@ -272,7 +273,7 @@ export function readUsage(days = 30): UsageReport {
 
     const stat = (() => {
       try {
-        return statSync(STATE_DB).mtimeMs
+        return statSync(getStateDbPath()).mtimeMs
       } catch {
         return 0
       }
@@ -417,7 +418,7 @@ export function readStatus(): StatusReport {
     }
   }
   const sources = [
-    one('state.db', STATE_DB),
+    one('state.db', getStateDbPath()),
     one('models_dev_cache.json', PRICING_CACHE),
     one('logs/errors.log', ERROR_LOG),
   ]

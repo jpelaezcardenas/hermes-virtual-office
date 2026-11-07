@@ -29,15 +29,26 @@ export type { AvatarKind, AvatarState, AvatarWrite } from './types'
  * between machines without ever being committed. `OFFICE_DB_PATH` overrides it
  * for tests.
  */
-const DB_PATH = process.env.OFFICE_DB_PATH ?? resolve(process.cwd(), 'data/office.db')
+const resolveDbPath = () => process.env.OFFICE_DB_PATH ?? resolve(process.cwd(), 'data/office.db')
 
 let db: DatabaseSync | null = null
+let openedDbPath: string | null = null
 
 /** Open (once) and migrate. Safe to call on every request. */
 export function officeDb(): DatabaseSync {
-  if (db) return db
-  mkdirSync(dirname(DB_PATH), { recursive: true })
-  const d = new DatabaseSync(DB_PATH)
+  const currentPath = resolveDbPath()
+  if (db && openedDbPath === currentPath) return db
+  if (db) {
+    try {
+      db.close()
+    } catch {
+      // ignore close error on path switch
+    }
+    db = null
+    openedDbPath = null
+  }
+  mkdirSync(dirname(currentPath), { recursive: true })
+  const d = new DatabaseSync(currentPath)
   d.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -74,6 +85,7 @@ export function officeDb(): DatabaseSync {
     d.exec(`ALTER TABLE avatar_state ADD COLUMN anchored INTEGER NOT NULL DEFAULT 0`)
   }
   db = d
+  openedDbPath = currentPath
   return d
 }
 
@@ -86,6 +98,7 @@ export function _resetOfficeDbForTest(): void {
     // belum pernah dibuka / sudah ditutup
   }
   db = null
+  openedDbPath = null
 }
 
 const now = () => new Date().toISOString()

@@ -4135,8 +4135,43 @@ void (async () => {
   // ───────────────────────────────────────────────────────────────────────────
   {
     const problems: string[] = []
+    const prevHome = process.env.HERMES_HOME
+    const tmpHome = mkdtempSync(join(tmpdir(), 'hermes-usage-win-'))
+    process.env.HERMES_HOME = tmpHome
+    const { DatabaseSync } = await import('node:sqlite')
+    const udb = new DatabaseSync(join(tmpHome, 'state.db'))
+    const nowSec = Math.floor(Date.now() / 1000)
+    const oldSec = nowSec - 10 * 86_400
+    const recentSec = nowSec - 3_600
+    udb.exec(`
+      CREATE TABLE session_model_usage (
+        model TEXT,
+        billing_provider TEXT,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        cache_read_tokens INTEGER,
+        api_call_count INTEGER,
+        last_seen INTEGER
+      );
+      CREATE TABLE sessions (
+        session_id TEXT,
+        model TEXT,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        cache_read_tokens INTEGER,
+        started_at TEXT
+      );
+    `)
+    udb.prepare(`INSERT INTO session_model_usage VALUES (?, ?, ?, ?, ?, ?, ?)`).run('gpt-4o-mini', 'openai', 1200, 300, 0, 2, recentSec)
+    udb.prepare(`INSERT INTO session_model_usage VALUES (?, ?, ?, ?, ?, ?, ?)`).run('claude-3-5-sonnet', 'anthropic', 5000, 1000, 0, 5, oldSec)
+    udb.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?)`).run('s-recent', 'gpt-4o-mini', 1200, 300, 0, new Date(recentSec * 1000).toISOString())
+    udb.prepare(`INSERT INTO sessions VALUES (?, ?, ?, ?, ?, ?)`).run('s-old', 'claude-3-5-sonnet', 5000, 1000, 0, new Date(oldSec * 1000).toISOString())
+    udb.close()
     const long = readUsage(3650)
     const short = readUsage(1)
+    if (prevHome === undefined) delete process.env.HERMES_HOME
+    else process.env.HERMES_HOME = prevHome
+    rmSync(tmpHome, { recursive: true, force: true })
 
     if (long.windowDays !== 3650) problems.push(`jendela 3650 hari dilaporkan sebagai ${long.windowDays}`)
     if (short.windowDays !== 1) problems.push(`jendela 1 hari dilaporkan sebagai ${short.windowDays}`)
@@ -5341,10 +5376,11 @@ void (async () => {
     // bukan kegagalan, jadi dilewati dengan alasan yang terlihat.
     const liveStart = await gatewayStartMs()
     if (liveStart === null) {
-      const { listProfiles } = await import('../src/lib/hermes/kanban')
-      const adaHermes = (await listProfiles().catch(() => [] as string[])).length > 0
-      if (adaHermes) problems.push('gateway tak terbaca padahal Hermes terpasang di mesin ini')
-      else console.log('  dilewati: start gateway — tidak ada instalasi Hermes di mesin ini')
+      const { hermesHome } = await import('../src/lib/hermes/kanban')
+      const hasPidFile = existsSync(join(hermesHome(), 'gateway.pid'))
+      const isLinuxSystemd = process.platform === 'linux' && existsSync('/run/systemd/system')
+      if (hasPidFile || isLinuxSystemd) problems.push('gateway tak terbaca padahal Hermes gateway berjalan di mesin ini')
+      else console.log('  dilewati: start gateway ? gateway daemon / systemd tidak berjalan di mesin ini')
     }
 
     // 4. originVerdict: 4 cabang.
