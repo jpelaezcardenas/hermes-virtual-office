@@ -3,12 +3,26 @@ import { createTask, listAgents, listAssignees, listTasks } from '@/lib/hermes/k
 import { visible } from '@/lib/hermes/office-membership'
 import { blockedAssigneesFor } from '@/lib/hermes/approvals'
 import type { TaskOrigin } from '@/types/hermes'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
+import { isDemoMode } from '@/lib/office/mode'
 
 export const dynamic = 'force-dynamic'
 
 /** The board: tasks plus the agents staffing them. */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
+
+  if (isDemoMode()) {
+    return NextResponse.json({
+      tasks: [],
+      agents: [],
+      demo: true,
+      mode: 'demo',
+      observedAt: new Date().toISOString(),
+    })
+  }
+
   try {
     // `--archived` is inclusive, so this is the live board PLUS the archive: the
     // 2D view has an ARSIP column that stayed permanently empty without it.
@@ -23,23 +37,26 @@ export async function GET() {
     // Ini yang memberi makan avatar: agent yang task aktifnya menunggu manusia harus tampil
     // 'blocked' DI SINI, bukan hanya di menu spawn.
     const agents = visible(await listAgents(tasks, assignees, await blockedAssigneesFor(tasks)))
-    return NextResponse.json({ tasks, agents })
+    return NextResponse.json({
+      tasks,
+      agents,
+      demo: false,
+      mode: 'live',
+      observedAt: new Date().toISOString(),
+    })
   } catch (err) {
-    // Fallback to Contexia agent roster (11 native Contexia agents) if local CLI is unavailable
-    const contexiaAgents = [
-      { name: 'hermes', displayName: 'Hermes', role: 'orchestrator', division: 'exec', deskIndex: null, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
-      { name: 'taty', displayName: 'Taty', role: 'manager', division: 'content', deskIndex: 7, status: 'idle', model: 'openai/gpt-4o' },
-      { name: 'orchestrator', displayName: 'Orchestrator', role: 'orchestrator', division: 'exec', deskIndex: 9, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
-      { name: 'contexia-dev', displayName: 'Contexia Dev', role: 'backend', division: 'tech', deskIndex: 8, status: 'idle', model: 'deepseek/deepseek-chat' },
-      { name: 'kb', displayName: 'Kb', role: 'researcher', division: 'exec', deskIndex: 5, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
-      { name: 'social-ops', displayName: 'Social Ops', role: 'content', division: 'content', deskIndex: 6, status: 'idle', model: 'google/gemini-2.0-flash' },
-      { name: 'radar', displayName: 'Radar', role: 'marketing', division: 'growth', deskIndex: 4, status: 'idle', model: 'google/gemini-2.0-flash' },
-      { name: 'pulso', displayName: 'Pulso', role: 'manager', division: 'growth', deskIndex: 3, status: 'idle', model: 'openai/gpt-4o' },
-      { name: 'approval-queue', displayName: 'Approval Queue', role: 'qa', division: 'exec', deskIndex: 2, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
-      { name: 'centinela', displayName: 'Centinela', role: 'manager', division: 'tech', deskIndex: 0, status: 'idle', model: 'openai/gpt-4o' },
-      { name: 'auditoria', displayName: 'Auditoria', role: 'qa', division: 'tech', deskIndex: 1, status: 'idle', model: 'anthropic/claude-3-7-sonnet' },
-    ]
-    return NextResponse.json({ tasks: [], agents: contexiaAgents })
+    return NextResponse.json(
+      {
+        tasks: [],
+        agents: [],
+        demo: false,
+        mode: 'live',
+        unavailable: true,
+        observedAt: new Date().toISOString(),
+        reason: err instanceof Error ? err.message : 'hermes_tasks_unavailable',
+      },
+      { status: 503 },
+    )
   }
 }
 

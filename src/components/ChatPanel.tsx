@@ -177,7 +177,7 @@ export default function ChatPanel({
       setSession(res.data.session)
       setMessages((m) => [
         ...m,
-        { role: 'assistant', content: res.data!.reply || '(kosong)', ts: Date.now() },
+        { role: 'assistant', content: res.data!.reply || '(vacío)', ts: Date.now() },
       ])
       void loadList()
     } finally {

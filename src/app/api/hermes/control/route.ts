@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 import {
   ACTION_EFFECT,
   ESTOP_PATH,
@@ -34,7 +34,9 @@ export const dynamic = 'force-dynamic'
  *   3. Balasannya menyebut APA YANG TERJADI, bukan cuma "ok". Aksi yang tidak bisa dilaporkan
  *      hasilnya akan ditekan lagi oleh operator.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   return NextResponse.json({
     pause: readPause(),
     estopPath: ESTOP_PATH,

@@ -11,7 +11,7 @@ import {
   taskLog,
   unblockTask,
 } from '@/lib/hermes/kanban'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +23,9 @@ export const dynamic = 'force-dynamic'
  * 200 with an empty payload — a misspelled or deleted task looked like a real task
  * that simply had no runs. A 404 is the honest answer.
  */
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const { id } = await ctx.params
   try {
     const task = await getTask(id)

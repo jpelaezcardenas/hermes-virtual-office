@@ -3,6 +3,7 @@ import { matchOwner, parseActionItems } from '@/lib/hermes/action-items'
 import { listAgents, listTasks } from '@/lib/hermes/kanban'
 import { visibleNames } from '@/lib/hermes/office-membership'
 import { listMeetings, readArchived } from '@/lib/hermes/meeting'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,8 @@ export const dynamic = 'force-dynamic'
  * rather than duplicated here.
  */
 export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const from = req.nextUrl.searchParams.get('from')
   if (!from) {
     return NextResponse.json(

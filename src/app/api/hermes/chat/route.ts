@@ -10,7 +10,7 @@ import {
 } from '@/lib/hermes/chat'
 import { listAgents, listProfiles, listTasks } from '@/lib/hermes/kanban'
 import { visibleNames } from '@/lib/hermes/office-membership'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +35,8 @@ async function chatProfiles(): Promise<string[]> {
 }
 
 export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const agent = req.nextUrl.searchParams.get('agent')
   try {
     // `?live=1` — siapa yang sedang diajak bicara, untuk kantor (agent pergi ke mejanya).

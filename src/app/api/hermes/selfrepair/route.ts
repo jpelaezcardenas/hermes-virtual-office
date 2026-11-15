@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 import { runDoctor } from '@/lib/hermes/doctor'
 import { previewRepairs, runRepairs } from '@/lib/hermes/selfrepair'
 
@@ -16,6 +16,8 @@ export const dynamic = 'force-dynamic'
  * Keduanya idempoten: keadaan sehat → tak ada yang berubah.
  */
 export async function GET(req: Request) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   try {
     const preview = await previewRepairs()
     return NextResponse.json({ success: true, ...preview })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 import { actOnJob, createJob, listJobs, listRuns, parseLimit, readJobList, type JobAction } from '@/lib/hermes/cron'
 import { cronPulse } from '@/lib/office/duty'
 
@@ -17,6 +17,8 @@ export const dynamic = 'force-dynamic'
  * confirmed click from an unconfirmed one. Documented in API-SPEC.md.
  */
 export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const id = req.nextUrl.searchParams.get('id')
   const limit = Number(req.nextUrl.searchParams.get('limit') || 25)
   try {

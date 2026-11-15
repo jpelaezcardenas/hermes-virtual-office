@@ -3,6 +3,7 @@ import { getJob } from '@/lib/hermes/cron'
 import { listAgents, listTasks } from '@/lib/hermes/kanban'
 import { visibleNames } from '@/lib/hermes/office-membership'
 import type { Candidate } from '@/types/hermes'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,8 @@ export const dynamic = 'force-dynamic'
  * `/api/hermes/tasks`.
  */
 export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const from = req.nextUrl.searchParams.get('from')
   if (!from) {
     return NextResponse.json(

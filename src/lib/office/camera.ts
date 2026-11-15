@@ -109,9 +109,9 @@ export const CAMERA_PRESETS: Record<CameraPresetId, CameraPreset> = {
   'upper-floor': {
     id: 'upper-floor',
     name: 'Upper Floor & CEO',
-    description: 'Close view of upper level corridor, CEO suite, and Rinjani room',
-    position: { x: -12, y: 6.2, z: -6 },
-    target: { x: -20, y: 4.5, z: -16 },
+    description: 'Elevated unobstructed view of upper level corridor, CEO suite, and Rinjani room',
+    position: { x: -10, y: 14.5, z: -2 },
+    target: { x: -18, y: 4.2, z: -15 },
     fov: 45,
     zoom: 1.0,
     minDistance: 3,

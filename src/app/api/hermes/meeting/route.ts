@@ -10,7 +10,7 @@ import {
 import { listAgents, listTasks } from '@/lib/hermes/kanban'
 import { listServedAgents } from '@/lib/hermes/a2a-served'
 import { visibleNames } from '@/lib/hermes/office-membership'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +24,8 @@ export const dynamic = 'force-dynamic'
  * `GET /api/hermes/meeting?id=<meetingId>` returns one archived transcript.
  */
 export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const id = req.nextUrl.searchParams.get('id')
   if (id) {
     const body = await readArchived(id)

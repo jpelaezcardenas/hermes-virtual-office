@@ -16,7 +16,8 @@ import {
   tasksForAssignee,
 } from '@/lib/hermes/kanban'
 import { BUILTIN_HIDDEN, hiddenNames, isHidden, hide, show } from '@/lib/hermes/office-membership'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
+import { isDemoMode } from '@/lib/office/mode'
 import type { AgentDivision, AgentRole } from '@/types/hermes'
 import { ROLE_LABEL, soulFor } from '@/lib/hermes/soul'
 import { parseDomains, ownersForDomains } from '@/lib/hermes/a2a'
@@ -54,7 +55,56 @@ async function readNeedsGatewayRestart(): Promise<boolean | null> {
  * touch the profile or its tasks. `kill` is the destructive one: it deletes the
  * profile and purges its tasks.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
+
+  if (isDemoMode()) {
+    const demoAvailable = [
+      {
+        name: 'hermes',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'demo/synthetic',
+        role: 'orchestrator' as AgentRole,
+        division: 'exec' as AgentDivision,
+        soulExists: true,
+        domains: ['orquestación', 'operaciones'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+      {
+        name: 'taty',
+        total: 0,
+        profile: true,
+        inOffice: true,
+        model: 'demo/synthetic',
+        role: 'manager' as AgentRole,
+        division: 'content' as AgentDivision,
+        soulExists: true,
+        domains: ['finanzas', 'impuestos', 'facturación'],
+        a2a: 'served' as const,
+        reason: null,
+      },
+    ]
+    return NextResponse.json({
+      available: demoAvailable,
+      hidden: [],
+      permissions: agentPermissionSummary(),
+      domainOwners: {
+        'orquestación': 'hermes',
+        'operaciones': 'hermes',
+        'finanzas': 'taty',
+        'impuestos': 'taty',
+      },
+      needsGatewayRestart: null,
+      demo: true,
+      mode: 'demo',
+      observedAt: new Date().toISOString(),
+    })
+  }
+
   try {
     const [assignees, tasks, profiles] = await Promise.all([
       listAssignees(),
@@ -143,174 +193,26 @@ export async function GET() {
        * dipastikan (UI tampilkan abu, bukan hijau).
        */
       needsGatewayRestart,
+      demo: false,
+      mode: 'live',
+      observedAt: new Date().toISOString(),
     })
   } catch (err) {
-    const fallbackAvailable = [
+    return NextResponse.json(
       {
-        name: 'hermes',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'anthropic/claude-3-7-sonnet',
-        role: 'orchestrator' as AgentRole,
-        division: 'exec' as AgentDivision,
-        soulExists: true,
-        domains: ['orquestación', 'operaciones'],
-        a2a: 'served' as const,
-        reason: null,
+        available: [],
+        hidden: [],
+        permissions: agentPermissionSummary(),
+        domainOwners: {},
+        needsGatewayRestart: null,
+        demo: false,
+        mode: 'live',
+        unavailable: true,
+        observedAt: new Date().toISOString(),
+        reason: err instanceof Error ? err.message : 'hermes_runtime_unavailable',
       },
-      {
-        name: 'taty',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'openai/gpt-4o',
-        role: 'manager' as AgentRole,
-        division: 'content' as AgentDivision,
-        soulExists: true,
-        domains: ['finanzas', 'impuestos', 'facturación'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'orchestrator',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'anthropic/claude-3-7-sonnet',
-        role: 'orchestrator' as AgentRole,
-        division: 'exec' as AgentDivision,
-        soulExists: true,
-        domains: ['enjambre', 'gobernanza'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'contexia-dev',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'deepseek/deepseek-chat',
-        role: 'backend' as AgentRole,
-        division: 'tech' as AgentDivision,
-        soulExists: true,
-        domains: ['desarrollo', 'infraestructura', 'apis'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'kb',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'anthropic/claude-3-7-sonnet',
-        role: 'researcher' as AgentRole,
-        division: 'exec' as AgentDivision,
-        soulExists: true,
-        domains: ['conocimiento', 'documentación'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'social-ops',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'google/gemini-2.0-flash',
-        role: 'content' as AgentRole,
-        division: 'content' as AgentDivision,
-        soulExists: true,
-        domains: ['social', 'marketing', 'comunicación'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'radar',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'google/gemini-2.0-flash',
-        role: 'marketing' as AgentRole,
-        division: 'growth' as AgentDivision,
-        soulExists: true,
-        domains: ['monitoreo', 'tendencias', 'mercado'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'pulso',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'openai/gpt-4o',
-        role: 'manager' as AgentRole,
-        division: 'growth' as AgentDivision,
-        soulExists: true,
-        domains: ['métricas', 'analytics', 'caja'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'approval-queue',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'anthropic/claude-3-7-sonnet',
-        role: 'qa' as AgentRole,
-        division: 'exec' as AgentDivision,
-        soulExists: true,
-        domains: ['aprobaciones', 'gobernanza'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'centinela',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'openai/gpt-4o',
-        role: 'manager' as AgentRole,
-        division: 'tech' as AgentDivision,
-        soulExists: true,
-        domains: ['fiscal', 'compliance', 'tributario'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-      {
-        name: 'auditoria',
-        total: 0,
-        profile: true,
-        inOffice: true,
-        model: 'anthropic/claude-3-7-sonnet',
-        role: 'qa' as AgentRole,
-        division: 'tech' as AgentDivision,
-        soulExists: true,
-        domains: ['auditoría', 'verificación'],
-        a2a: 'served' as const,
-        reason: null,
-      },
-    ]
-    return NextResponse.json({
-      available: fallbackAvailable,
-      hidden: [],
-      permissions: agentPermissionSummary(),
-      domainOwners: {
-        'orquestación': 'hermes',
-        'operaciones': 'hermes',
-        'finanzas': 'taty',
-        'impuestos': 'taty',
-        'enjambre': 'orchestrator',
-        'desarrollo': 'contexia-dev',
-        'conocimiento': 'kb',
-        'social': 'social-ops',
-        'tendencias': 'radar',
-        'métricas': 'pulso',
-        'aprobaciones': 'approval-queue',
-        'fiscal': 'centinela',
-        'auditoría': 'auditoria',
-      },
-      needsGatewayRestart: false,
-    })
+      { status: 503 },
+    )
   }
 }
 

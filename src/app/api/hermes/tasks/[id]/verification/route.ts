@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTaskVerification } from '@/lib/hermes/kanban'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,9 @@ export const dynamic = 'force-dynamic'
  * hanya membaca jejak review (`review_requested` → `completed`). Gagal membaca `show` = 502,
  * BUKAN "klaim" — panel harus bisa membedakan "tidak terverifikasi" dari "tidak tahu".
  */
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const { id } = await ctx.params
   try {
     return NextResponse.json(await getTaskVerification(id))

@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { listModels } from '@/lib/hermes/kanban'
+import { assertStudioReadRequest } from '@/lib/local-guard'
+import { isDemoMode } from '@/lib/office/mode'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,16 +13,33 @@ export const dynamic = 'force-dynamic'
  * with — a hardcoded dropdown would drift from config.yaml. The CLI masks
  * api_key, so nothing secret leaves the server.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
+
+  if (isDemoMode()) {
+    return NextResponse.json({
+      models: [
+        { model: 'demo/synthetic', provider: 'demo', label: 'Demo Model (Read-Only)' },
+      ],
+      demo: true,
+      mode: 'demo',
+    })
+  }
+
   try {
-    return NextResponse.json({ models: await listModels() })
+    return NextResponse.json({ models: await listModels(), demo: false, mode: 'live' })
   } catch (err) {
-    const fallbackModels = [
-      { model: 'anthropic/claude-3-7-sonnet', provider: 'anthropic', label: 'Claude 3.7 Sonnet (Anthropic)' },
-      { model: 'openai/gpt-4o', provider: 'openai', label: 'GPT-4o (OpenAI)' },
-      { model: 'deepseek/deepseek-chat', provider: 'deepseek', label: 'DeepSeek Chat (DeepSeek)' },
-      { model: 'google/gemini-2.0-flash', provider: 'google', label: 'Gemini 2.0 Flash (Google)' },
-    ]
-    return NextResponse.json({ models: fallbackModels })
+    return NextResponse.json(
+      {
+        models: [],
+        demo: false,
+        mode: 'live',
+        unavailable: true,
+        observedAt: new Date().toISOString(),
+        reason: err instanceof Error ? err.message : 'hermes_models_unavailable',
+      },
+      { status: 503 },
+    )
   }
 }

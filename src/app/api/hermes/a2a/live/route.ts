@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { CHAT_LIVE_MS, type A2aPair } from '@/lib/office/duty'
 import { a2aLivePairs } from '@/lib/hermes/a2a-transcript'
 import { readA2aTranscript } from '@/lib/hermes/a2a-transcript-server'
 import { listAgents, listProfiles, listTasks } from '@/lib/hermes/kanban'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,9 @@ export const dynamic = 'force-dynamic'
 let memo: { at: number; pairs: A2aPair[] } | null = null
 const MEMO_MS = 20_000
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   try {
     const now = Date.now()
     if (memo && now - memo.at < MEMO_MS) {

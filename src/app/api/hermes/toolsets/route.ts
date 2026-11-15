@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,9 @@ const HERMES_BIN = process.env.HERMES_BIN || 'hermes'
  * A2A hanya bisa mengumumkan toolset nyata — bukan tag bebas. Tanpa endpoint
  * ini form harus mengarang daftarnya (dan cepat basi).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   try {
     const { stdout } = await run(HERMES_BIN, ['tools', 'list', '--platform', 'cli'], {
       timeout: 20_000,

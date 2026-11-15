@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { runDoctor } from '@/lib/hermes/doctor'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,8 @@ export const dynamic = 'force-dynamic'
  * diteruskan supaya periksa origin menilai browser yang sebenarnya.
  */
 export async function GET(req: Request) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   try {
     const report = await runDoctor({
       host: req.headers.get('host'),

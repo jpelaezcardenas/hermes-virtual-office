@@ -9,7 +9,7 @@ import {
   type AvatarWrite,
 } from '@/lib/office/db'
 import { dummyRoster } from '@/lib/office/dummy-roster'
-import { assertLocalWriteRequest } from '@/lib/local-guard'
+import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 import type { AgentDivision } from '@/types/hermes'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,9 @@ export const dynamic = 'force-dynamic'
  * to the office itself. Keeping them apart means a broken Hermes install still
  * lets the room render, and the office's own tables never risk the CLI's schema.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   try {
     // First run: populate the dummy roster so the building is not empty. Idempotent
     // — it only fires when the table has no rows at all.

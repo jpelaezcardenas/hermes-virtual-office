@@ -1,4 +1,6 @@
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
+import { isDemoMode } from '@/lib/office/mode'
 
 /**
  * Write guard for the office's mutating endpoints.
@@ -102,16 +104,129 @@ export function localOriginAllowed(hostHeader: string | null, originHeader: stri
   }
 }
 
-function hasOfficeSessionCookie(cookieHeader: string | null): boolean {
-  if (!cookieHeader) return false
-  return cookieHeader
-    .split(';')
-    .map((part) => part.trim())
-    .some((part) => {
-      if (!part.startsWith('office_session=')) return false
-      const val = part.slice('office_session='.length).trim()
-      return val.length > 0
-    })
+export interface StudioSessionPayload {
+  sub: string
+  tenantId: string
+  role: OfficeRole
+  studioId: string
+  exp: number
+  jti: string
+}
+
+const EPHEMERAL_FALLBACK_SECRET = randomBytes(32).toString('hex')
+const REVOKED_JTIS = new Map<string, number>()
+
+function sessionSigningSecret(): string {
+  const configured =
+    (process.env.STUDIO_SESSION_SECRET || '').trim() ||
+    (process.env.STUDIO_ACCESS_TOKEN || '').trim()
+  return configured || EPHEMERAL_FALLBACK_SECRET
+}
+
+function base64UrlEncode(input: Buffer | string): string {
+  const buf = typeof input === 'string' ? Buffer.from(input, 'utf8') : input
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function base64UrlDecode(input: string): Buffer | null {
+  try {
+    const pad = input.length % 4 === 0 ? '' : '='.repeat(4 - (input.length % 4))
+    const b64 = input.replace(/-/g, '+').replace(/_/g, '/') + pad
+    return Buffer.from(b64, 'base64')
+  } catch {
+    return null
+  }
+}
+
+export function signStudioSession(
+  input:
+    | StudioSessionPayload
+    | {
+        sub: string
+        tenantId: string
+        role: OfficeRole
+        studioId: string
+        ttlSeconds?: number
+        jti?: string
+      },
+): string {
+  const nowSec = Math.floor(Date.now() / 1000)
+  const payload: StudioSessionPayload =
+    'exp' in input
+      ? input
+      : {
+          sub: input.sub,
+          tenantId: input.tenantId,
+          role: input.role,
+          studioId: input.studioId,
+          exp: nowSec + (input.ttlSeconds ?? 900),
+          jti: input.jti ?? randomUUID(),
+        }
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
+  const sig = createHmac('sha256', sessionSigningSecret()).update(encodedPayload).digest()
+  return `${encodedPayload}.${base64UrlEncode(sig)}`
+}
+
+export function revokeStudioSession(jti: string, expUnixSec?: number): void {
+  if (!jti) return
+  const nowSec = Math.floor(Date.now() / 1000)
+  for (const [key, exp] of REVOKED_JTIS.entries()) {
+    if (exp <= nowSec) REVOKED_JTIS.delete(key)
+  }
+  REVOKED_JTIS.set(jti, expUnixSec ?? nowSec + 86400)
+}
+
+export function verifyStudioSession(token: string | null | undefined): StudioSessionPayload | null {
+  if (!token) return null
+  const parts = token.trim().split('.')
+  if (parts.length !== 2) return null
+  const [encodedPayload, encodedSig] = parts
+  if (!encodedPayload || !encodedSig) return null
+
+  const providedSig = base64UrlDecode(encodedSig)
+  if (!providedSig) return null
+  const expectedSig = createHmac('sha256', sessionSigningSecret()).update(encodedPayload).digest()
+  if (providedSig.length !== expectedSig.length || !timingSafeEqual(providedSig, expectedSig)) {
+    return null
+  }
+
+  const rawPayload = base64UrlDecode(encodedPayload)
+  if (!rawPayload) return null
+  try {
+    const parsed = JSON.parse(rawPayload.toString('utf8')) as Partial<StudioSessionPayload>
+    if (
+      !parsed ||
+      typeof parsed.sub !== 'string' ||
+      typeof parsed.tenantId !== 'string' ||
+      typeof parsed.studioId !== 'string' ||
+      typeof parsed.jti !== 'string' ||
+      typeof parsed.exp !== 'number' ||
+      !(parsed.role && parsed.role in ROLE_RANK)
+    ) {
+      return null
+    }
+    const nowSec = Math.floor(Date.now() / 1000)
+    if (parsed.exp <= nowSec) return null
+    if (REVOKED_JTIS.has(parsed.jti)) return null
+    return parsed as StudioSessionPayload
+  } catch {
+    return null
+  }
+}
+
+export function extractOfficeSessionToken(req: Request): string | null {
+  const headerVal = req.headers.get('x-office-session')?.trim()
+  if (headerVal) return headerVal
+  const cookieHeader = req.headers.get('cookie')
+  if (!cookieHeader) return null
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim()
+    if (trimmed.startsWith('office_session=')) {
+      const val = trimmed.slice('office_session='.length).trim()
+      if (val.length > 0) return decodeURIComponent(val)
+    }
+  }
+  return null
 }
 
 function extractBearerToken(authHeader: string | null): string | null {
@@ -120,10 +235,85 @@ function extractBearerToken(authHeader: string | null): string | null {
   return match ? match[1].trim() : null
 }
 
+function resolveStudioCaller(req: Request): { authenticated: boolean; role?: OfficeRole; session?: StudioSessionPayload } {
+  const studioToken = (process.env.STUDIO_ACCESS_TOKEN || '').trim()
+  const headerToken = req.headers.get('x-studio-access-token')?.trim() || null
+  const bearerToken = extractBearerToken(req.headers.get('authorization'))
+
+  if (studioToken.length > 0 && (headerToken === studioToken || bearerToken === studioToken)) {
+    return { authenticated: true, role: 'admin' }
+  }
+
+  const sessionToken = extractOfficeSessionToken(req) ?? bearerToken
+  const verifiedSession = verifyStudioSession(sessionToken)
+  if (verifiedSession) {
+    return { authenticated: true, role: verifiedSession.role, session: verifiedSession }
+  }
+
+  return { authenticated: false }
+}
+
+export function assertStudioReadRequest(
+  req: Request,
+  minRole: OfficeRole = 'viewer',
+): NextResponse | null {
+  if (isDemoMode()) return null
+
+  const studioToken = (process.env.STUDIO_ACCESS_TOKEN || '').trim()
+  const requireAuth =
+    studioToken.length > 0 ||
+    process.env.OFFICE_REQUIRE_READ_AUTH === 'true' ||
+    process.env.OFFICE_REQUIRE_WRITE_AUTH === 'true'
+
+  if (!requireAuth) return null
+
+  const caller = resolveStudioCaller(req)
+  if (!caller.authenticated || !caller.role) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'unauthorized_studio_read',
+          message: 'Studio read requires a valid STUDIO_ACCESS_TOKEN or signed office_session.',
+          status: 401,
+        },
+      },
+      { status: 401 },
+    )
+  }
+
+  if (ROLE_RANK[caller.role] < ROLE_RANK[minRole]) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'insufficient_office_role',
+          message: `Role "${caller.role}" does not satisfy minimum required role "${minRole}".`,
+          status: 403,
+        },
+      },
+      { status: 403 },
+    )
+  }
+
+  return null
+}
+
 export function assertLocalWriteRequest(
   req: Request,
   requiredRole?: OfficeRole,
 ): NextResponse | null {
+  if (isDemoMode()) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'demo_mode_read_only',
+          message: 'Studio is in DEMO mode; write operations are disabled.',
+          status: 403,
+        },
+      },
+      { status: 403 },
+    )
+  }
+
   const host = req.headers.get('host')
   const origin = req.headers.get('origin')
   const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase()
@@ -170,22 +360,13 @@ export function assertLocalWriteRequest(
   const requireWriteAuth = process.env.OFFICE_REQUIRE_WRITE_AUTH === 'true'
 
   if (studioToken.length > 0 || requireWriteAuth) {
-    const headerToken = req.headers.get('x-studio-access-token')?.trim() || null
-    const bearerToken = extractBearerToken(req.headers.get('authorization'))
-    const hasCookieSession = hasOfficeSessionCookie(req.headers.get('cookie'))
-    const hasSessionHeader = Boolean(req.headers.get('x-office-session')?.trim())
-
-    const tokenMatches =
-      studioToken.length > 0 &&
-      (headerToken === studioToken || bearerToken === studioToken)
-    const sessionAuthenticated = hasCookieSession || hasSessionHeader || ( studioToken.length === 0 && Boolean(bearerToken) )
-
-    if (!tokenMatches && !sessionAuthenticated) {
+    const caller = resolveStudioCaller(req)
+    if (!caller.authenticated || !caller.role) {
       return NextResponse.json(
         {
           error: {
             code: 'unauthorized_studio_write',
-            message: 'Studio write requires a valid STUDIO_ACCESS_TOKEN or delegated office_session.',
+            message: 'Studio write requires a valid STUDIO_ACCESS_TOKEN or signed office_session.',
             status: 401,
           },
         },
@@ -193,28 +374,18 @@ export function assertLocalWriteRequest(
       )
     }
 
-    const roleHeader = req.headers.get('x-office-role')?.trim().toLowerCase() as OfficeRole | undefined
-    if (requiredRole !== undefined || (requireWriteAuth && roleHeader !== undefined)) {
-      const effectiveMinRole: OfficeRole = requiredRole ?? 'operator'
-      const callerRole: OfficeRole | undefined =
-        roleHeader && roleHeader in ROLE_RANK
-          ? roleHeader
-          : requiredRole !== undefined
-            ? undefined
-            : 'operator'
-
-      if (!callerRole || ROLE_RANK[callerRole] < ROLE_RANK[effectiveMinRole]) {
-        return NextResponse.json(
-          {
-            error: {
-              code: 'insufficient_office_role',
-              message: `Role "${callerRole ?? 'none'}" does not satisfy minimum required role "${effectiveMinRole}".`,
-              status: 403,
-            },
+    const effectiveMinRole: OfficeRole = requiredRole ?? 'operator'
+    if (ROLE_RANK[caller.role] < ROLE_RANK[effectiveMinRole]) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'insufficient_office_role',
+            message: `Role "${caller.role}" does not satisfy minimum required role "${effectiveMinRole}".`,
+            status: 403,
           },
-          { status: 403 },
-        )
-      }
+        },
+        { status: 403 },
+      )
     }
   }
 

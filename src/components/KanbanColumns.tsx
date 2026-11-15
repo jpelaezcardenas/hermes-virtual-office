@@ -208,7 +208,7 @@ export default function KanbanColumns({
                   </article>
                 )
               })}
-              {!column.items.length && <div className="vp-empty">kosong</div>}
+              {!column.items.length && <div className="vp-empty">sin tareas</div>}
             </div>
           </section>
         ))}

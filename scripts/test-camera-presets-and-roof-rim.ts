@@ -112,8 +112,8 @@ async function runTests() {
     // Upper floor
     const upper = getCameraPreset('upper-floor')
     assert('upper-floor preset exists', upper.id === 'upper-floor')
-    assert('upper-floor position is {-12, 6.2, -6}', upper.position.x === -12 && upper.position.y === 6.2 && upper.position.z === -6)
-    assert('upper-floor target is {-20, 4.5, -16}', upper.target.x === -20 && upper.target.y === 4.5 && upper.target.z === -16)
+    assert('upper-floor position is {-10, 14.5, -2}', upper.position.x === -10 && upper.position.y === 14.5 && upper.position.z === -2)
+    assert('upper-floor target is {-18, 4.2, -15}', upper.target.x === -18 && upper.target.y === 4.2 && upper.target.z === -15)
     assert('upper-floor fov is 45', upper.fov === 45)
     assert('upper-floor zoom is 1.0', upper.zoom === 1.0)
     assert('upper-floor reference image is office-upper-floor.jpg', upper.referenceImage === 'office-upper-floor.jpg')
@@ -257,8 +257,8 @@ async function runTests() {
     // Switch to upper-floor
     mgr.applyPreset('upper-floor', false)
     assert('Active preset switched to upper-floor', mgr.getActivePresetId() === 'upper-floor')
-    assert('Camera position updated to upper-floor {-12, 6.2, -6}', mockCamera.position.x === -12 && mockCamera.position.y === 6.2 && mockCamera.position.z === -6)
-    assert('Controls target updated to upper-floor {-20, 4.5, -16}', mockControls.target.x === -20 && mockControls.target.y === 4.5 && mockControls.target.z === -16)
+    assert('Camera position updated to upper-floor {-10, 14.5, -2}', mockCamera.position.x === -10 && mockCamera.position.y === 14.5 && mockCamera.position.z === -2)
+    assert('Controls target updated to upper-floor {-18, 4.2, -15}', mockControls.target.x === -18 && mockControls.target.y === 4.2 && mockControls.target.z === -15)
     assert('Camera fov updated to 45', mockCamera.fov === 45)
 
     // Resize while upper-floor is active
