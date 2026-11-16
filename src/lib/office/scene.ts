@@ -405,6 +405,11 @@ export function createScene(
 
   function setLabel(a: SceneAgent) {
     const el = a.label.element as HTMLDivElement
+    if (a.avatarId === 'dummy:lobby:reception') {
+      a.label.visible = false
+      el.style.display = 'none'
+      return
+    }
     el.textContent = a.data.displayName
     el.dataset.status = a.data.status
     el.dataset.role = a.data.role
