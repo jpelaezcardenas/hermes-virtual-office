@@ -72,6 +72,56 @@ export default function OfficeApp() {
 
   useEffect(() => startPolling(), [])
 
+  // Bunker parent <-> Studio iframe exact-origin session handshake
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return
+    const ALLOWED_PARENTS = new Set([
+      'https://contexia.online',
+      'https://www.contexia.online',
+      'https://app.contexia.online',
+    ])
+    let targetParentOrigin = 'https://contexia.online'
+    try {
+      if (document.referrer) {
+        const refOrigin = new URL(document.referrer).origin
+        if (ALLOWED_PARENTS.has(refOrigin)) targetParentOrigin = refOrigin
+      }
+    } catch {
+      // keep default
+    }
+
+    let redeemed = false
+    const onMessage = async (event: MessageEvent) => {
+      if (!ALLOWED_PARENTS.has(event.origin)) return
+      if (event.data?.type !== 'bunker:launch' || redeemed) return
+      const code = typeof event.data?.code === 'string' ? event.data.code : ''
+      const nonce = typeof event.data?.nonce === 'string' ? event.data.nonce : ''
+      const studioId = typeof event.data?.studio_id === 'string' ? event.data.studio_id : 'contexia-hermes-studio'
+      if (!code || !nonce) return
+      redeemed = true
+      try {
+        const res = await fetch('/api/hermes/session/redeem', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, nonce, studio_id: studioId }),
+        })
+        if (res.ok) {
+          void loadOffice()
+          void loadTasks()
+        } else {
+          redeemed = false
+        }
+      } catch {
+        redeemed = false
+      }
+    }
+
+    window.addEventListener('message', onMessage)
+    window.parent.postMessage({ type: 'studio:ready' }, targetParentOrigin)
+    return () => window.removeEventListener('message', onMessage)
+  }, [loadOffice, loadTasks])
+
   // Tinggi top bar TIDAK tetap: di layar sempit tombolnya pindah ke baris kedua, dan
   // angka status berubah panjang. Diukur langsung lalu diberikan ke CSS, supaya
   // kanvas dan panel samping mulai tepat di bawahnya alih-alih menebak 58px.
