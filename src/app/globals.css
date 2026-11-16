@@ -448,14 +448,14 @@ button.vp-run:hover { border-left-color: #6f8fa3; background: #131c23; }
 }
 .vp-label {
   /* opaque backdrop so tags do not visually collide through glass partitions */
-  font: 10px/1 ui-monospace, monospace;
-  letter-spacing: 0.06em;
+  font: 9px/1 ui-monospace, monospace;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #cfe3ee;
   background: #0b1218f2;
   border: 1px solid #2b3b46;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 6px;
   white-space: nowrap;
 }
 .vp-label[data-status='working'] { border-color: #46c08a; color: #a8ecc7; }

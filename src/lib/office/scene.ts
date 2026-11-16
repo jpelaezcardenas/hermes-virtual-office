@@ -1252,6 +1252,41 @@ export function createScene(
     if (!skipRender) {
       renderer.render(scene, camera)
       labelRenderer.render(scene, camera)
+      // Screen-space de-overlap pass so agent nameplates never stack on top of each other
+      const labelEls = Array.from(
+        labelRenderer.domElement.querySelectorAll<HTMLElement>('.vp-label'),
+      ).filter((el) => el.style.display !== 'none')
+      const placed: Array<{ left: number; right: number; top: number; bottom: number }> = []
+      for (const el of labelEls) {
+        el.style.marginTop = '0px'
+      }
+      for (const el of labelEls) {
+        const rect = el.getBoundingClientRect()
+        if (rect.width === 0 || rect.height === 0) continue
+        let offsetY = 0
+        let box = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const collides = placed.some(
+            (p) =>
+              box.left < p.right + 4 &&
+              box.right + 4 > p.left &&
+              box.top < p.bottom + 2 &&
+              box.bottom + 2 > p.top,
+          )
+          if (!collides) break
+          offsetY -= 16
+          box = {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top + offsetY,
+            bottom: rect.bottom + offsetY,
+          }
+        }
+        if (offsetY !== 0) {
+          el.style.marginTop = `${offsetY}px`
+        }
+        placed.push(box)
+      }
     }
   }
 

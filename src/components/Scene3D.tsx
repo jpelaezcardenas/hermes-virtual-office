@@ -152,7 +152,7 @@ export default function Scene3D({ onScene, onDummy, onBoard, onName }: Props) {
       if (t.kind === 'minutes') {
         s.say(meeting.moderator, 'notulen siap — lihat panel')
       } else {
-        const label = t.kind === 'opening' ? 'membuka rapat' : t.text.slice(0, 140)
+        const label = t.kind === 'opening' ? 'abrió la reunión' : t.text.slice(0, 140)
         s.say(t.speaker, label, 9000)
       }
     }

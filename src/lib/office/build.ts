@@ -1378,55 +1378,30 @@ export function buildOffice(scene: THREE.Scene, hour: number) {
 
   /* --------------------------------------------------------------- roof --- */
   {
-    // DOLLHOUSE: the roof is a THIN RIM around the north bar, not a lid. A solid
-    // roof hid the whole exec floor — the CEO suite, all five meeting rooms and the
-    // whiteboard were under an opaque slab. The rim keeps the building reading as a
-    // building from outside while leaving the interior visible from above.
+    // DOLLHOUSE OPEN-FRONT: sleek architectural cornice on the north, west, and
+    // east exterior walls only — no front south beam and no floating cross-beams
+    // obstructing the upper-floor interior view.
     const n = BARS.north
     for (const [px, pz, pw, pd] of [
-      [0, -HALF_D - 0.3, HALF_W * 2 + 0.6, 0.6],
-      [0, -9 + 0.3, HALF_W * 2 + 0.6, 0.6],
-      [-HALF_W - 0.3, (n.z1 + n.z2) / 2, 0.6, n.z2 - n.z1 + 0.6],
-      [HALF_W + 0.3, (n.z1 + n.z2) / 2, 0.6, n.z2 - n.z1 + 0.6],
+      [0, -HALF_D - 0.08, HALF_W * 2 + 0.32, 0.16],
+      [-HALF_W - 0.08, (n.z1 + n.z2) / 2, 0.16, n.z2 - n.z1 + 0.16],
+      [HALF_W + 0.08, (n.z1 + n.z2) / 2, 0.16, n.z2 - n.z1 + 0.16],
     ] as const) {
-      const p = box(pw, 0.55, pd, 0x8f9aa0, { rough: 0.9 })
-      p.position.set(px, LEVEL_H * 2 + 0.35, pz)
-      p.castShadow = true
+      const p = box(pw, 0.14, pd, 0x8f9aa0, { rough: 0.9 })
+      p.position.set(px, LEVEL_H * 2 + 0.07, pz)
       group.add(p)
     }
   }
 
   /* ---------------------------------------------------- ceiling + lights -- */
-  // DOLLHOUSE: no ceiling SLAB anywhere. A slab over the west bar hid the three
-  // division rooms from above, and one over the east bar hid the pantry and the
-  // leisure room — the interior was built and then covered up. What remains is a
-  // perimeter BEAM (so the bars read as roofed) plus the light panels themselves,
-  // which hang in the open. The courtyard has no ceiling at all: that is what
-  // makes the pool outdoor.
-  for (const bar of [BARS.west, BARS.east, BARS.lobby]) {
-    const w = bar.x2 - bar.x1
-    const d = bar.z2 - bar.z1
-    const cx = (bar.x1 + bar.x2) / 2
-    const cz = (bar.z1 + bar.z2) / 2
-    // four thin beams around the bar's edge
-    for (const [bx, bz, bw, bd] of [
-      [cx, bar.z1 + 0.15, w, 0.3],
-      [cx, bar.z2 - 0.15, w, 0.3],
-      [bar.x1 + 0.15, cz, 0.3, d],
-      [bar.x2 - 0.15, cz, 0.3, d],
-    ] as const) {
-      const beam = box(bw, 0.34, bd, 0xf2f4f4, { rough: 0.95 })
-      beam.position.set(bx, LEVEL_H - 0.17, bz)
-      group.add(beam)
-    }
-  }
-  // hanging light panels over the exec floor (they are the `streaks` the palette
-  // dims at night) and over the division rooms.
+  // DOLLHOUSE: no floating ceiling beams or opaque light bars over rooms, so the
+  // interior remains completely unobstructed from every camera angle while
+  // PointLights still illuminate every workspace.
   const panelRows: { x: number; z: number; w: number; y: number }[] = [
     // exec floor
     { x: 0, z: -19, w: HALF_W * 2 - 4, y: LEVEL_H * 2 - 0.35 },
     { x: 0, z: -15.5, w: HALF_W * 2 - 4, y: LEVEL_H * 2 - 0.35 },
-    // ground floor: one row per bar, hanging at the ceiling line
+    // ground floor: one row per bar
     { x: -21, z: -13, w: 12, y: LEVEL_H - 0.35 },
     { x: -21, z: 0, w: 12, y: LEVEL_H - 0.35 },
     { x: -21, z: 13, w: 12, y: LEVEL_H - 0.35 },
@@ -1435,11 +1410,7 @@ export function buildOffice(scene: THREE.Scene, hour: number) {
     { x: 0, z: 18, w: 20, y: LEVEL_H - 0.35 },
   ]
   for (const p of panelRows) {
-    const panel = box(p.w, 0.05, 0.4, 0xffffff, { emissive: 0xfff4e0, ei: 1 })
-    panel.position.set(p.x, p.y, p.z)
-    group.add(panel)
-    streaks.push(panel)
-    const l = new THREE.PointLight(0xfff6e6, 0.5, 22)
+    const l = new THREE.PointLight(0xfff6e6, 0.55, 24)
     l.position.set(p.x, p.y - 0.4, p.z)
     group.add(l)
   }
