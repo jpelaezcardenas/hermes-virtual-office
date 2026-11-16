@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { assertLocalWriteRequest, assertStudioReadRequest } from '@/lib/local-guard'
 import { actOnJob, createJob, listJobs, listRuns, parseLimit, readJobList, type JobAction } from '@/lib/hermes/cron'
 import { cronPulse } from '@/lib/office/duty'
+import { isDemoMode } from '@/lib/office/mode'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,32 @@ export async function GET(req: NextRequest) {
   if (denied) return denied
   const id = req.nextUrl.searchParams.get('id')
   const limit = Number(req.nextUrl.searchParams.get('limit') || 25)
+
+  if (isDemoMode()) {
+    if (req.nextUrl.searchParams.get('pulse') === '1') {
+      return NextResponse.json({
+        pulse: null,
+        demo: true,
+        mode: 'demo',
+        observedAt: new Date().toISOString(),
+      })
+    }
+    if (id) {
+      return NextResponse.json(
+        { error: { code: 'invalid_request', message: `job "${id}" tidak ditemukan`, status: 404 } },
+        { status: 404 },
+      )
+    }
+    return NextResponse.json({
+      jobs: [],
+      runs: [],
+      jobsAgeSeconds: 0,
+      demo: true,
+      mode: 'demo',
+      observedAt: new Date().toISOString(),
+    })
+  }
+
   try {
     // `?pulse=1` — cron agent yang baru jalan, untuk kantor. Hanya membaca jobs.json (tanpa
     // `cron runs` lewat CLI), karena dipoll tiap beberapa detik. Hasilnya TIDAK menyebut agent:
@@ -56,53 +83,18 @@ export async function GET(req: NextRequest) {
         : { jobsAgeSeconds: readout.ageSeconds }),
     })
   } catch (err) {
-    const fallbackJobs = [
+    return NextResponse.json(
       {
-        id: 'cron-sync-supabase',
-        name: 'Sincronización Periódica Supabase',
-        prompt: 'Verificar y sincronizar transacciones pendientes en base de datos',
-        schedule: 'every 1h',
-        scheduleKind: 'interval',
-        enabled: true,
-        state: 'running',
-        nextRunAt: new Date(Date.now() + 1800000).toISOString(),
-        lastRunAt: new Date(Date.now() - 1800000).toISOString(),
-        lastStatus: 'completed',
-        lastError: null,
-        failureStreak: 0,
-        deliver: 'broadcast',
-        noAgent: false,
-        script: null,
-        skills: [],
-        repeatTimes: null,
-        repeatCompleted: 24,
+        jobs: [],
+        runs: [],
+        demo: false,
+        mode: 'live',
+        unavailable: true,
+        observedAt: new Date().toISOString(),
+        reason: err instanceof Error ? err.message : 'hermes_cron_unavailable',
       },
-      {
-        id: 'cron-metrics-audit',
-        name: 'Auditoría de Métricas Contexia',
-        prompt: 'Auditar consumo y reportar estado de agentes al backend',
-        schedule: 'every 6h',
-        scheduleKind: 'interval',
-        enabled: true,
-        state: 'idle',
-        nextRunAt: new Date(Date.now() + 7200000).toISOString(),
-        lastRunAt: new Date(Date.now() - 14400000).toISOString(),
-        lastStatus: 'completed',
-        lastError: null,
-        failureStreak: 0,
-        deliver: 'broadcast',
-        noAgent: false,
-        script: null,
-        skills: [],
-        repeatTimes: null,
-        repeatCompleted: 12,
-      },
-    ]
-    return NextResponse.json({
-      jobs: fallbackJobs,
-      runs: [],
-      jobsAgeSeconds: 0,
-    })
+      { status: 503 },
+    )
   }
 }
 

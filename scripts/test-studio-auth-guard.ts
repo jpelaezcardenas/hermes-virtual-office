@@ -11,6 +11,7 @@
  * Run: npx tsx scripts/test-studio-auth-guard.ts
  */
 
+import { NextRequest } from 'next/server'
 import {
   assertLocalWriteRequest,
   assertStudioReadRequest,
@@ -19,6 +20,10 @@ import {
   revokeStudioSession,
   type StudioSessionPayload,
 } from '../src/lib/local-guard'
+import { POST as evidencePost } from '../src/app/api/hermes/tasks/evidence/route'
+import { POST as verificationPost } from '../src/app/api/hermes/tasks/verification/route'
+import { GET as cronGet } from '../src/app/api/hermes/cron/route'
+import { GET as toolsetsGet } from '../src/app/api/hermes/toolsets/route'
 
 let checks = 0
 let failures = 0
@@ -193,6 +198,83 @@ async function run() {
       })
       const res = assertLocalWriteRequest(m2mReq, 'admin')
       assert('allows STUDIO_ACCESS_TOKEN for admin write', res === null, `got ${res?.status}`)
+    }
+
+    // 9. Production mode fails closed on read even without env auth flags
+    {
+      const origNodeEnv = process.env.NODE_ENV
+      delete process.env.STUDIO_ACCESS_TOKEN
+      delete process.env.OFFICE_REQUIRE_READ_AUTH
+      delete process.env.OFFICE_REQUIRE_WRITE_AUTH
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = 'production'
+      try {
+        const anonReq = new Request('http://localhost:3001/api/hermes/agents', {
+          method: 'GET',
+          headers: { host: 'localhost:3001' },
+        })
+        const res = assertStudioReadRequest(anonReq)
+        assert('NODE_ENV=production fails closed on anonymous read without env flags (401)', res !== null && res.status === 401, `got ${res?.status}`)
+      } finally {
+        ;(process.env as Record<string, string | undefined>).NODE_ENV = origNodeEnv
+        process.env.STUDIO_ACCESS_TOKEN = 'test-studio-token-123'
+        process.env.OFFICE_REQUIRE_WRITE_AUTH = 'true'
+        process.env.OFFICE_REQUIRE_READ_AUTH = 'true'
+      }
+    }
+
+    // 10. Evidence & verification batch POST routes enforce assertStudioReadRequest
+    {
+      const evReq = new NextRequest('http://localhost:3001/api/hermes/tasks/evidence', {
+        method: 'POST',
+        headers: { host: 'localhost:3001', 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: ['t-1'] }),
+      })
+      const evRes = await evidencePost(evReq)
+      assert('anonymous POST /api/hermes/tasks/evidence returns 401', evRes.status === 401, `got ${evRes.status}`)
+
+      const vfReq = new NextRequest('http://localhost:3001/api/hermes/tasks/verification', {
+        method: 'POST',
+        headers: { host: 'localhost:3001', 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: ['t-1'] }),
+      })
+      const vfRes = await verificationPost(vfReq)
+      assert('anonymous POST /api/hermes/tasks/verification returns 401', vfRes.status === 401, `got ${vfRes.status}`)
+    }
+
+    // 11. Cron & toolsets return 503 unavailable (never synthetic 200) on failure in live mode
+    {
+      const origHermesHome = process.env.HERMES_HOME
+      const origHermesBin = process.env.HERMES_BIN
+      process.env.HERMES_HOME = 'C:\\nonexistent-hermes-home-99999'
+      process.env.HERMES_BIN = 'nonexistent-hermes-bin-99999'
+      try {
+        const cronReq = new NextRequest('http://localhost:3001/api/hermes/cron', {
+          method: 'GET',
+          headers: { host: 'localhost:3001', cookie: `office_session=${viewerToken}` },
+        })
+        const cronRes = await cronGet(cronReq)
+        const cronBody = (await cronRes.json()) as Record<string, unknown>
+        assert(
+          'GET /api/hermes/cron returns 503 unavailable on CLI failure (never synthetic 200)',
+          cronRes.status === 503 && cronBody.unavailable === true && Array.isArray(cronBody.jobs) && cronBody.jobs.length === 0,
+          `got ${cronRes.status}`,
+        )
+
+        const toolReq = new NextRequest('http://localhost:3001/api/hermes/toolsets', {
+          method: 'GET',
+          headers: { host: 'localhost:3001', cookie: `office_session=${viewerToken}` },
+        })
+        const toolRes = await toolsetsGet(toolReq)
+        const toolBody = (await toolRes.json()) as Record<string, unknown>
+        assert(
+          'GET /api/hermes/toolsets returns 503 unavailable on CLI failure',
+          toolRes.status === 503 && toolBody.unavailable === true && Array.isArray(toolBody.toolsets) && toolBody.toolsets.length === 0,
+          `status=${toolRes.status}`,
+        )
+      } finally {
+        process.env.HERMES_HOME = origHermesHome
+        process.env.HERMES_BIN = origHermesBin
+      }
     }
   } finally {
     process.env.STUDIO_ACCESS_TOKEN = origToken

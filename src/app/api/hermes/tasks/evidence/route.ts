@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { EVIDENCE_BATCH_CAP } from '@/lib/hermes/evidence'
 import { evidenceMarks } from '@/lib/hermes/kanban'
+import { assertStudioReadRequest } from '@/lib/local-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,8 @@ export const dynamic = 'force-dynamic'
  * Maksimal EVIDENCE_BATCH_CAP id diperiksa; sisanya `unchecked` (netral, tidak dinilai).
  */
 export async function POST(req: NextRequest) {
+  const denied = assertStudioReadRequest(req)
+  if (denied) return denied
   const body = await req.json().catch(() => ({}))
   const ids: unknown = body?.ids
   if (!Array.isArray(ids)) {

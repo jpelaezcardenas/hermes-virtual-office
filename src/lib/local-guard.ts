@@ -260,7 +260,9 @@ export function assertStudioReadRequest(
   if (isDemoMode()) return null
 
   const studioToken = (process.env.STUDIO_ACCESS_TOKEN || '').trim()
+  const isProd = process.env.NODE_ENV === 'production'
   const requireAuth =
+    isProd ||
     studioToken.length > 0 ||
     process.env.OFFICE_REQUIRE_READ_AUTH === 'true' ||
     process.env.OFFICE_REQUIRE_WRITE_AUTH === 'true'

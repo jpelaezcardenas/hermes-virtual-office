@@ -274,17 +274,17 @@ export default function OfficeApp() {
 
       {/* ------------------------------------------------------- top bar */}
       <header ref={barRef} className="vp-topbar !flex !flex-row !items-center !justify-between !flex-nowrap !gap-3 overflow-x-auto">
+        {isDemoMode() && (
+          <span
+            data-testid="office-demo-badge"
+            className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shrink-0"
+          >
+            DEMO
+          </span>
+        )}
         {/* Hidden per user request: "elimina esto" */}
         <div className="hidden" aria-hidden="true">
           <span className="vp-logo">Hermes Office</span>
-          {isDemoMode() && (
-            <span
-              data-testid="office-demo-badge"
-              className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none"
-            >
-              DEMO
-            </span>
-          )}
           <span className={`vp-dot ${backendOnline ? 'ok' : 'bad'}`} />
           <span className="vp-muted vp-topbar-status">
             {backendOnline ? `${agents.length} agentes · ${running} activos · ${pct}% completado` : 'backend offline'}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { assertStudioReadRequest } from '@/lib/local-guard'
+import { isDemoMode } from '@/lib/office/mode'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,16 @@ const HERMES_BIN = process.env.HERMES_BIN || 'hermes'
 export async function GET(req: NextRequest) {
   const denied = assertStudioReadRequest(req)
   if (denied) return denied
+
+  if (isDemoMode()) {
+    return NextResponse.json({
+      toolsets: [],
+      demo: true,
+      mode: 'demo',
+      observedAt: new Date().toISOString(),
+    })
+  }
+
   try {
     const { stdout } = await run(HERMES_BIN, ['tools', 'list', '--platform', 'cli'], {
       timeout: 20_000,
@@ -30,12 +41,16 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ toolsets: toolsets.sort((a, b) => a.name.localeCompare(b.name)) })
   } catch (err) {
-    const fallbackToolsets = [
-      { name: 'web-search', enabled: true },
-      { name: 'supabase-db', enabled: true },
-      { name: 'chatwoot-sync', enabled: true },
-      { name: 'finance-ledger', enabled: true },
-    ]
-    return NextResponse.json({ toolsets: fallbackToolsets })
+    return NextResponse.json(
+      {
+        toolsets: [],
+        demo: false,
+        mode: 'live',
+        unavailable: true,
+        observedAt: new Date().toISOString(),
+        reason: err instanceof Error ? err.message : 'hermes_toolsets_unavailable',
+      },
+      { status: 503 },
+    )
   }
 }
